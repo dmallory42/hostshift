@@ -91,7 +91,7 @@ On 24 September 2026, the menu bar update passed the same 27 automated checks an
 
 **Hostshift → Check for Updates…** checks the latest public GitHub release. Settings offers an opt-in daily check; checks run while the main window is open. A newer release opens in the browser after choosing **View Release**. The checker does not install or replace the app, interrupt an activation, or save/discard profile edits. It uses Apple's URLSession, AppKit alerts and SwiftUI controls, with no updater dependency.
 
-Configure the public release repository and version when building:
+The default release repository is `dmallory42/hostshift`. Override the repository and set the version when building:
 
 ```sh
 HOSTSHIFT_UPDATE_REPOSITORY="OWNER/REPOSITORY" \

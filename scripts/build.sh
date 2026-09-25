@@ -21,7 +21,7 @@ swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
 cp Resources/local.hostshift.helper.plist "$APP/Contents/Library/LaunchDaemons/"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [[ -n "${HOSTSHIFT_UPDATE_REPOSITORY:-}" ]]; then
-    plutil -insert HostshiftUpdateRepository -string "$HOSTSHIFT_UPDATE_REPOSITORY" "$APP/Contents/Info.plist"
+    plutil -replace HostshiftUpdateRepository -string "$HOSTSHIFT_UPDATE_REPOSITORY" "$APP/Contents/Info.plist"
 fi
 if [[ -n "${HOSTSHIFT_VERSION:-}" ]]; then
     plutil -replace CFBundleShortVersionString -string "$HOSTSHIFT_VERSION" "$APP/Contents/Info.plist"
