@@ -2,8 +2,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/sdk.sh
-APP="$PWD/build/Hostshift.app"
-MODULES="$PWD/build/modules"
+OUTPUT_DIR="${HOSTSHIFT_BUILD_DIR:-$PWD/build}"
+APP="$OUTPUT_DIR/Hostshift.app"
+MODULES="$OUTPUT_DIR/modules"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchDaemons" "$MODULES"
 ARCH=$(uname -m)
 TARGET="$ARCH-apple-macosx14.0"
@@ -29,8 +30,8 @@ fi
 if [[ -n "${HOSTSHIFT_BUILD_NUMBER:-}" ]]; then
     plutil -replace CFBundleVersion -string "$HOSTSHIFT_BUILD_NUMBER" "$APP/Contents/Info.plist"
 fi
-swift scripts/icon.swift "$PWD/build"
-iconutil -c icns build/Hostshift.iconset -o "$APP/Contents/Resources/Hostshift.icns"
+swift scripts/icon.swift "$OUTPUT_DIR"
+iconutil -c icns "$OUTPUT_DIR/Hostshift.iconset" -o "$APP/Contents/Resources/Hostshift.icns"
 SIGNING_IDENTITY="${HOSTSHIFT_SIGNING_IDENTITY:--}"
 codesign --force --options runtime --identifier local.hostshift.helper --sign "$SIGNING_IDENTITY" "$APP/Contents/MacOS/HostshiftHelper"
 codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$APP"
