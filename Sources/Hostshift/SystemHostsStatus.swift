@@ -1,0 +1,31 @@
+import SwiftUI
+
+struct SystemHostsStatus: View {
+    let store: ProfileStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let active = store.library?.profiles.first(where: { $0.id == store.activeID }) {
+                Label("Active: \(active.name.isEmpty ? "Untitled" : active.name)", systemImage: "checkmark.circle")
+                    .foregroundStyle(.secondary)
+                Button("Show Active Profile") { store.selection = active.id }
+                    .buttonStyle(.link)
+            } else if store.systemContent != nil {
+                Label("System hosts differ", systemImage: "exclamationmark.circle")
+                    .foregroundStyle(.secondary)
+                    .help("The system hosts file doesn’t match any saved profile.")
+                Button("Capture as Profile") { store.captureCurrentHosts() }
+                    .buttonStyle(.link)
+                    .help("Create a new profile from the current /etc/hosts file")
+            } else {
+                Label("System hosts unavailable", systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.secondary)
+                Button("Try Again") { store.refresh() }
+                    .buttonStyle(.link)
+            }
+        }
+        .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+    }
+}
