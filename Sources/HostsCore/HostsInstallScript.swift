@@ -18,14 +18,15 @@ public enum HostsInstallScript {
         actual=$(/usr/bin/shasum -a 256 "$target")
         [ "${actual%% *}" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
         temporary=$(/usr/bin/mktemp /private/etc/.hostshift.XXXXXX)
-        trap '/bin/rm -f "$temporary"' EXIT
+        backup=$(/usr/bin/mktemp /private/etc/.hostshift-backup.XXXXXX)
+        trap '/bin/rm -f "$temporary" "$backup"' EXIT
         /usr/bin/printf '%s' '\(payload)' | /usr/bin/base64 -D > "$temporary"
         /usr/sbin/chown root:wheel "$temporary"
         /bin/chmod 644 "$temporary"
-        backup=$(/usr/bin/mktemp /private/etc/hosts.hostshift-backup.XXXXXX)
         /bin/cp -p "$target" "$backup"
         actual=$(/usr/bin/shasum -a 256 "$target")
         [ "${actual%% *}" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
+        /bin/mv -f "$backup" /private/etc/hosts.hostshift-backup
         /bin/mv -f "$temporary" "$target"
         if /usr/bin/dscacheutil -flushcache && /usr/bin/killall -HUP mDNSResponder; then
             echo 'Activated. DNS cache refreshed.'

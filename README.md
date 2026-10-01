@@ -32,7 +32,7 @@ You can also activate a profile from its right-click menu or the macOS menu bar.
 
 ## Your configuration
 
-Profiles stay on your Mac. Hostshift keeps your initial hosts file as **Original** and backs up `/etc/hosts` before each switch. Existing connections and apps with their own DNS caches may need restarting.
+Profiles stay on your Mac. Hostshift keeps your initial hosts file as **Original**. Each switch saves the file it replaces to `/private/etc/hosts.hostshift-backup`. Existing connections and apps with their own DNS caches may need restarting.
 
 To uninstall, activate **Original** if you want to restore it, then choose **Settings → Disable System Access** before deleting the app.
 

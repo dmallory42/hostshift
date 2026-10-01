@@ -50,7 +50,7 @@ Use **Hostshift → Settings → Disable System Access** before uninstalling or 
 
 Profiles are stored in `~/Library/Application Support/Hostshift/profiles.json`. The Original profile remains unchanged. Import and export preserve file contents, including comments.
 
-Each switch checks the system file's SHA-256 digest before replacing it, creates a backup at `/private/etc/hosts.hostshift-backup.*`, and atomically moves a prepared file into place with `root:wheel` ownership and `0644` permissions. Backups are retained until manually removed. As with other hosts editors, concurrent writes from another tool should be avoided; digest checks cannot lock out unrelated processes.
+Each switch checks the system file's SHA-256 digest before replacing it, saves the file it replaces to `/private/etc/hosts.hostshift-backup`, and atomically moves a prepared file into place with `root:wheel` ownership and `0644` permissions. Each switch overwrites that backup, so it always holds the file from before the latest switch. As with other hosts editors, concurrent writes from another tool should be avoided; digest checks cannot lock out unrelated processes.
 
 Administrator approval happens during helper setup. Later switches use authenticated XPC calls. Local builds pin both peers to their exact code-signing requirements, with the approved user ID stored in the root-owned registration. Apple-signed builds require peers with the expected bundle identifier and the same Apple signing team. The helper independently validates incoming content, serialises writes, and only exposes hosts replacement. It never accepts a path or arbitrary shell command from clients. Hostshift never handles or stores an administrator password.
 

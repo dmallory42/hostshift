@@ -46,8 +46,8 @@ struct Checks {
         let target = folder.appending(path: "hosts")
         let payload = "# ' \" $(touch /tmp/hostshift-injection) `id` \\ café\n127.0.0.1 example.test\n"
         try original.write(to: target, atomically: true, encoding: .utf8)
-        func runInstall(expected: String) throws -> (Int32, String) {
-            let script = HostsInstallScript.shell(content: payload, expected: expected)
+        func runInstall(content: String = payload, expected: String) throws -> (Int32, String) {
+            let script = HostsInstallScript.shell(content: content, expected: expected)
                 .replacing("/private/etc/", with: folder.path + "/")
                 .replacing("/usr/sbin/chown root:wheel", with: "/usr/bin/true")
                 .replacing("/usr/bin/dscacheutil -flushcache", with: "/usr/bin/true")
@@ -67,16 +67,24 @@ struct Checks {
         check(applied.0 == 0, "Install shell succeeds: \(applied.1)")
         let installed = try String(contentsOf: target, encoding: .utf8)
         check(installed == payload, "Shell metacharacters and Unicode round-trip literally")
-        let backups = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil).filter { $0.lastPathComponent.hasPrefix("hosts.hostshift-backup.") }
-        check(backups.count == 1, "Creates backup before replacement")
-        let backup = try String(contentsOf: backups[0], encoding: .utf8)
+        let backupURL = folder.appending(path: "hosts.hostshift-backup")
+        let backup = try String(contentsOf: backupURL, encoding: .utf8)
         check(backup == original, "Backup preserves prior hosts")
         let conflict = try runInstall(expected: original)
         check(conflict.0 != 0 && conflict.1.contains("changed outside"), "Reject stale system content")
         let afterConflict = try String(contentsOf: target, encoding: .utf8)
         check(afterConflict == payload, "Conflict leaves hosts unchanged")
+        let backupAfterConflict = try String(contentsOf: backupURL, encoding: .utf8)
+        check(backupAfterConflict == original, "Conflict leaves backup unchanged")
+        let second = "127.0.0.1 second.test\n"
+        let switched = try runInstall(content: second, expected: payload)
+        check(switched.0 == 0, "Second switch succeeds: \(switched.1)")
+        let latestBackup = try String(contentsOf: backupURL, encoding: .utf8)
+        check(latestBackup == payload, "Backup holds the file the latest switch replaced")
+        let backups = try FileManager.default.contentsOfDirectory(atPath: folder.path).filter { $0.contains("hostshift-backup") }
+        check(backups == ["hosts.hostshift-backup"], "Only one backup is kept")
         try FileManager.default.removeItem(at: target)
-        try FileManager.default.createSymbolicLink(at: target, withDestinationURL: backups[0])
+        try FileManager.default.createSymbolicLink(at: target, withDestinationURL: backupURL)
         let symlink = try runInstall(expected: original)
         check(symlink.0 != 0, "Reject symlink target")
         print("\(count) checks passed. /etc/hosts was not modified.")
