@@ -6,7 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let store else { return .terminateNow }
-        guard !store.isApplying && !store.systemAccess.isUpdating else { return .terminateCancel }
+        guard !store.isBusy else { return .terminateCancel }
         guard store.hasUnsavedChanges else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "Save changes before quitting?"

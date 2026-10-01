@@ -19,13 +19,11 @@ struct HostshiftApp: App {
             ContentView(store: store)
                 .onAppear {
                     appDelegate.store = store
-                    updater.canPresent = { !store.isApplying && !store.systemAccess.isUpdating && !store.showSystemAccessSetup }
+                    updater.canPresent = { !store.isBusy && !store.showSystemAccessSetup }
                 }
                 .task {
                     while !Task.isCancelled {
-                        if !store.isApplying && !store.systemAccess.isUpdating && !store.showSystemAccessSetup {
-                            await updater.checkAutomatically()
-                        }
+                        await updater.checkAutomatically()
                         do { try await Task.sleep(for: .seconds(3600)) } catch { return }
                     }
                 }
@@ -38,7 +36,7 @@ struct HostshiftApp: App {
                 Button(updater.isChecking ? "Checking for Updates…" : "Check for Updates…") {
                     Task { await updater.check() }
                 }
-                .disabled(updater.isChecking || store.isApplying || store.systemAccess.isUpdating)
+                .disabled(updater.isChecking || store.isBusy)
             }
         }
         MenuBarExtra(isInserted: $showMenuBarExtra) {

@@ -47,7 +47,7 @@ struct QuickSwitchMenu: View {
         Divider()
         Button("Quit Hostshift") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
-            .disabled(store.isApplying || store.systemAccess.isUpdating)
+            .disabled(store.isBusy)
     }
 
     private var menuStatus: String {

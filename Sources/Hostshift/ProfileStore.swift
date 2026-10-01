@@ -15,6 +15,7 @@ final class ProfileStore {
     var isApplying = false
     private var drafts: [Profile] = []
     var hasUnsavedChanges: Bool { !drafts.isEmpty }
+    var isBusy: Bool { isApplying || systemAccess.isUpdating }
     @ObservationIgnored private var monitorTask: Task<Void, Never>?
     private let installer = HostsInstaller()
     private let libraryURL: URL
@@ -48,7 +49,7 @@ final class ProfileStore {
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(3)) } catch { return }
                 guard let self else { return }
-                if !self.isApplying && !self.systemAccess.isUpdating { self.refresh() }
+                if !self.isBusy { self.refresh() }
             }
         }
     }
