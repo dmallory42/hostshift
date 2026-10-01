@@ -123,7 +123,7 @@ final class ProfileStore {
 
     func add(name: String = "New Profile", content: String? = nil) {
         guard library != nil else { return }
-        let profile = Profile(name: name, content: content ?? profiles.first(where: \.isOriginal)?.content ?? "")
+        let profile = Profile(name: uniqueName(name), content: content ?? profiles.first(where: \.isOriginal)?.content ?? "")
         drafts.append(profile)
         selection = profile.id
     }
@@ -237,15 +237,19 @@ final class ProfileStore {
     @discardableResult
     func saveExternalChanges(_ content: String) -> Bool {
         guard var updated = library else { return false }
+        updated.profiles.append(Profile(name: uniqueName("Copy of /etc/hosts"), content: content))
+        return commit(updated)
+    }
+
+    private func uniqueName(_ name: String) -> String {
         let names = Set(profiles.map(\.name))
-        var name = "Copy of /etc/hosts"
+        var candidate = name
         var number = 2
-        while names.contains(name) {
-            name = "Copy of /etc/hosts (\(number))"
+        while names.contains(candidate) {
+            candidate = "\(name) (\(number))"
             number += 1
         }
-        updated.profiles.append(Profile(name: name, content: content))
-        return commit(updated)
+        return candidate
     }
 
     private static func askAboutExternalChanges(_ profile: Profile) -> ExternalChangeChoice {
