@@ -41,3 +41,7 @@ To uninstall, activate **Original** if you want to restore it, then choose **Set
 Use **Hostshift → Check for Updates…**, or enable automatic checks in Settings. Available updates open on GitHub for download.
 
 For tests, signing and release setup, see [Developing Hostshift](docs/development.md).
+
+## Licence
+
+Hostshift is free software under the GNU General Public License, version 2 or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
