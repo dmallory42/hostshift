@@ -8,8 +8,10 @@ struct SystemHostsStatus: View {
             if let active = store.activeProfile {
                 Label("Active: \(active.displayName)", systemImage: "checkmark.circle")
                     .foregroundStyle(.secondary)
-                Button("Show Active Profile") { store.selection = active.id }
-                    .buttonStyle(.link)
+                if store.selection != active.id {
+                    Button("Show Active Profile") { store.selection = active.id }
+                        .buttonStyle(.link)
+                }
             } else if store.systemContent != nil {
                 Label("System hosts differ", systemImage: "exclamationmark.circle")
                     .foregroundStyle(.secondary)

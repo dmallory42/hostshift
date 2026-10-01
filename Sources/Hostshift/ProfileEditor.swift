@@ -21,14 +21,14 @@ struct ProfileEditor: View {
                         .foregroundStyle(.secondary)
                         .help("Your hosts file when Hostshift first opened")
                     Spacer()
-                    Button("Duplicate") { store.duplicate(id: draft.id) }
-                        .help("Create an editable copy of Original")
                 } else {
                     TextField("Profile name", text: $draft.name)
                         .font(.title2.bold())
                         .textFieldStyle(.plain)
                         .accessibilityLabel("Profile name")
                 }
+                Button("Duplicate") { store.duplicate(id: draft.id) }
+                    .help(draft.isOriginal ? "Create an editable copy of Original" : "Create a copy of this profile")
                 if store.activeID == draft.id {
                     Label("Active", systemImage: "checkmark.circle.fill")
                         .font(.callout)

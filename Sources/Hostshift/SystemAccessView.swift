@@ -33,7 +33,7 @@ struct SystemAccessView: View {
             }
             if let error = access.errorMessage { Text(error).foregroundStyle(.red).textSelection(.enabled) }
         }
-        .padding(24)
+        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .disabled(access.isUpdating)
     }

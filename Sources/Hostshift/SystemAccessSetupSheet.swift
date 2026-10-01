@@ -12,9 +12,9 @@ struct SystemAccessSetupSheet: View {
                     .keyboardShortcut("q")
                     .disabled(access.isUpdating)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .padding([.horizontal, .bottom])
         }
+        .padding(8)
         .frame(width: 440)
     }
 }

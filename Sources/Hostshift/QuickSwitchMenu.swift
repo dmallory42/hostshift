@@ -30,11 +30,7 @@ struct QuickSwitchMenu: View {
                     Button {
                         switchProfile(profile.id)
                     } label: {
-                        if store.activeID == profile.id {
-                            Text("✓ \(profile.displayName) (Active)")
-                        } else {
-                            Text(profile.displayName)
-                        }
+                        Text(store.activeID == profile.id ? "✓ \(profile.displayName)" : profile.displayName)
                     }
                     .disabled(!store.canApply(profile))
                 }
