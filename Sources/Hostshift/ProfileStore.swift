@@ -130,7 +130,7 @@ final class ProfileStore {
 
     func duplicate(id: UUID? = nil) {
         guard let profile = profiles.first(where: { $0.id == (id ?? selection) }) else { return }
-        add(name: "\(profile.name) Copy", content: profile.content)
+        add(name: "Copy of \(profile.name)", content: profile.content)
     }
 
     func requestRename(id: UUID?) {
@@ -168,7 +168,7 @@ final class ProfileStore {
 
     func captureCurrentHosts() {
         refresh()
-        if let content = systemContent { add(name: "Current Hosts", content: content) }
+        if let content = systemContent { add(name: "Copy of /etc/hosts", content: content) }
     }
 
     func importProfile() {

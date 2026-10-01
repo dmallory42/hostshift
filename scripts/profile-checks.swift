@@ -15,10 +15,10 @@ import HostsCore
         let second = store.selected!
         precondition(store.saveSelected())
         store.duplicate(id: first.id)
-        precondition(store.selected?.content == first.content && store.selected?.name == "First Copy")
+        precondition(store.selected?.content == first.content && store.selected?.name == "Copy of First")
         print("PASS duplicate targets clicked profile, not selection")
         store.duplicate(id: first.id)
-        precondition(store.selected?.name == "First Copy (2)")
+        precondition(store.selected?.name == "Copy of First (2)")
         store.add()
         store.add()
         precondition(store.profiles.suffix(2).map(\.name) == ["New Profile", "New Profile (2)"])
