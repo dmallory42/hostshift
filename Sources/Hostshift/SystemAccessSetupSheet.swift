@@ -16,6 +16,5 @@ struct SystemAccessSetupSheet: View {
             .padding(.bottom, 24)
         }
         .frame(width: 440)
-        .interactiveDismissDisabled()
     }
 }
