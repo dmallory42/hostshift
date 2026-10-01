@@ -13,10 +13,7 @@ struct QuickSwitchMenu: View {
             Text("System file differs from saved profiles")
         }
         if !store.systemAccess.isReady {
-            Button("Enable System Access…") {
-                store.showSystemAccessSetup = true
-                showMainWindow()
-            }
+            Button("Enable System Access…", action: showMainWindow)
         }
         if store.hasUnsavedChanges {
             Button("Review Unsaved Changes…", action: showMainWindow)

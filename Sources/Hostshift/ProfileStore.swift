@@ -6,7 +6,7 @@ final class ProfileStore {
     let systemAccess = SystemAccess()
     var library: ProfileLibrary?
     var selection: UUID?
-    var showSystemAccessSetup = false
+    var showSystemAccessSetup: Bool { !systemAccess.isReady }
     var profileToRename: Profile?
     var profileToDelete: Profile?
     var showDeleteConfirmation = false

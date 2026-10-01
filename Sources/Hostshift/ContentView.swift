@@ -65,12 +65,6 @@ struct ContentView: View {
         } message: {
             Text("This permanently deletes the profile and any unsaved changes. This cannot be undone.")
         }
-        .task {
-            if !store.systemAccess.isReady { store.showSystemAccessSetup = true }
-        }
-        .onChange(of: store.systemAccess.isReady) { _, ready in
-            store.showSystemAccessSetup = !ready
-        }
         .onChange(of: scenePhase) { _, phase in if phase == .active { store.refresh() } }
         .frame(minWidth: 720, minHeight: 460)
     }
