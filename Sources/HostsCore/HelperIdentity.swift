@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 public enum HelperIdentity {
-    public static let serviceName = "local.hostshift.helper"
+    public static let serviceName = "dev.dmallory.hostshift.helper"
     public static let plistName = serviceName + ".plist"
 
     public static func peerRequirement(identifier: String) throws -> String {
@@ -17,7 +17,7 @@ public enum HelperIdentity {
               !team.isEmpty, team.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else {
             throw NSError(domain: "Hostshift", code: 1, userInfo: [NSLocalizedDescriptionKey: "This build needs an Apple code-signing identity before system access can be enabled."])
         }
-        guard ["local.hostshift.app", serviceName].contains(identifier) else {
+        guard ["dev.dmallory.hostshift", serviceName].contains(identifier) else {
             throw CocoaError(.coderInvalidValue)
         }
         return "anchor apple generic and identifier \"\(identifier)\" and certificate leaf[subject.OU] = \"\(team)\""

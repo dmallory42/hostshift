@@ -3,7 +3,7 @@
 <plist version="1.0"><dict>
 <key>CFBundleName</key><string>Hostshift</string>
 <key>CFBundleDisplayName</key><string>Hostshift</string>
-<key>CFBundleIdentifier</key><string>local.hostshift.app</string>
+<key>CFBundleIdentifier</key><string>dev.dmallory.hostshift</string>
 <key>CFBundleExecutable</key><string>Hostshift</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>

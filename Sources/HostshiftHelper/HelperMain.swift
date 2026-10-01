@@ -13,7 +13,7 @@ struct HelperMain {
             requirement = registration.clientRequirement
             allowedUser = registration.userID
         } else {
-            requirement = try HelperIdentity.peerRequirement(identifier: "local.hostshift.app")
+            requirement = try HelperIdentity.peerRequirement(identifier: "dev.dmallory.hostshift")
             allowedUser = nil
         }
         let delegate = HelperDelegate(requirement: requirement, allowedUser: allowedUser)

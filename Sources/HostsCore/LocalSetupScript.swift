@@ -35,13 +35,13 @@ public enum LocalSetupScript {
         /usr/sbin/chown root:wheel "$staged" "$settings" "$daemon"
         /bin/chmod 755 "$staged"
         /bin/chmod 644 "$settings" "$daemon"
-        if /bin/launchctl print system/local.hostshift.helper >/dev/null 2>&1; then
-            /bin/launchctl bootout system/local.hostshift.helper
+        if /bin/launchctl print system/dev.dmallory.hostshift.helper >/dev/null 2>&1; then
+            /bin/launchctl bootout system/dev.dmallory.hostshift.helper
         fi
         /bin/mv -f "$settings" \(quote(LocalRegistration.path))
         /bin/mv -f "$staged" \(quote(LocalRegistration.executable))
         /bin/mv -f "$daemon" \(quote(LocalRegistration.daemon))
-        /bin/launchctl enable system/local.hostshift.helper
+        /bin/launchctl enable system/dev.dmallory.hostshift.helper
         /bin/launchctl bootstrap system \(quote(LocalRegistration.daemon))
         """
     }
@@ -49,8 +49,8 @@ public enum LocalSetupScript {
     public static var uninstall: String {
         """
         set -eu
-        if /bin/launchctl print system/local.hostshift.helper >/dev/null 2>&1; then
-            /bin/launchctl bootout system/local.hostshift.helper
+        if /bin/launchctl print system/dev.dmallory.hostshift.helper >/dev/null 2>&1; then
+            /bin/launchctl bootout system/dev.dmallory.hostshift.helper
         fi
         /bin/rm -f '\(LocalRegistration.daemon)' '\(LocalRegistration.executable)' '\(LocalRegistration.path)'
         """

@@ -19,7 +19,7 @@ swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
 swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
     -I "$MODULES" Sources/HostshiftHelper/*.swift "$MODULES/HostsCore.o" \
     -o "$APP/Contents/MacOS/HostshiftHelper"
-cp Resources/local.hostshift.helper.plist "$APP/Contents/Library/LaunchDaemons/"
+cp Resources/dev.dmallory.hostshift.helper.plist "$APP/Contents/Library/LaunchDaemons/"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [[ -n "${HOSTSHIFT_UPDATE_REPOSITORY:-}" ]]; then
     plutil -replace HostshiftUpdateRepository -string "$HOSTSHIFT_UPDATE_REPOSITORY" "$APP/Contents/Info.plist"
@@ -33,6 +33,6 @@ fi
 swift scripts/icon.swift "$OUTPUT_DIR"
 iconutil -c icns "$OUTPUT_DIR/Hostshift.iconset" -o "$APP/Contents/Resources/Hostshift.icns"
 SIGNING_IDENTITY="${HOSTSHIFT_SIGNING_IDENTITY:--}"
-codesign --force --options runtime --identifier local.hostshift.helper --sign "$SIGNING_IDENTITY" "$APP/Contents/MacOS/HostshiftHelper"
+codesign --force --options runtime --identifier dev.dmallory.hostshift.helper --sign "$SIGNING_IDENTITY" "$APP/Contents/MacOS/HostshiftHelper"
 codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$APP"
 printf 'Built %s\n' "$APP"

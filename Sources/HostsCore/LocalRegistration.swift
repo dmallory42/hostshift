@@ -3,8 +3,8 @@ import Foundation
 public struct LocalRegistration: Codable, Equatable, Sendable {
     public static let directory = "/Library/Application Support/Hostshift"
     public static let path = directory + "/registration.json"
-    public static let executable = "/Library/PrivilegedHelperTools/local.hostshift.helper"
-    public static let daemon = "/Library/LaunchDaemons/local.hostshift.helper.plist"
+    public static let executable = "/Library/PrivilegedHelperTools/dev.dmallory.hostshift.helper"
+    public static let daemon = "/Library/LaunchDaemons/dev.dmallory.hostshift.helper.plist"
 
     public var clientRequirement: String
     public var helperRequirement: String
