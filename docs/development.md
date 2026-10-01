@@ -25,7 +25,7 @@ HOSTSHIFT_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 
 Quit the running app before rebuilding it with a different signing identity. Signing keys belong in the macOS Keychain, never in the repository.
 
-For distribution, notarise the signed app using Apple's notary service. Apple's service-management requirements include notarisation for apps containing launch daemons. Put the app in `/Applications` before enabling its helper so the service remains available before login. The app is not sandboxed because it manages a system file.
+For distribution, notarise the signed app using Apple's notary service. Apple's service-management requirements include notarisation for apps containing launch daemons. Put the app in `/Applications` before enabling its helper so the service remains available before login; release builds show a move-to-Applications instruction instead of enabling access from anywhere else. The app is not sandboxed because it manages a system file.
 
 After storing notarisation credentials in a Keychain profile, submit and staple the signed app:
 
@@ -38,7 +38,17 @@ xcrun stapler validate build/Hostshift.app
 spctl --assess --type execute --verbose=2 build/Hostshift.app
 ```
 
-Create the download archive after stapling. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
+Then package the stapled app as a drag-to-Applications disk image, and notarise and staple the disk image too:
+
+```sh
+HOSTSHIFT_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+./scripts/package-dmg.sh build/Hostshift.app
+xcrun notarytool submit build/Hostshift-1.0.dmg --keychain-profile Hostshift-notary --wait
+xcrun stapler staple build/Hostshift-1.0.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.0.dmg
+```
+
+`package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
 
 Local builds install the helper in `/Library/PrivilegedHelperTools/dev.dmallory.hostshift.helper`, its launch daemon in `/Library/LaunchDaemons/dev.dmallory.hostshift.helper.plist`, and its pinned identities in `/Library/Application Support/Hostshift/registration.json`. These files are root-owned. The helper is loaded on demand by launchd and survives app restarts. Rebuilding the app requires enabling access again because the local signature changes. Hostshift verifies the staged helper signature before installing it.
 
@@ -89,6 +99,6 @@ HOSTSHIFT_VERSION="1.1.0" HOSTSHIFT_BUILD_NUMBER="2" \
 ./scripts/build.sh
 ```
 
-Use numeric release tags such as `v1.1.0`, mark production releases as GitHub's latest release, and attach the app archive. Drafts and prereleases are not offered. This checker compares the marketing version, so increment `HOSTSHIFT_VERSION` for each published update. Unconfigured builds report that updates are unavailable and make no update requests. Private repositories are not supported; no GitHub credentials are embedded in the app.
+Use numeric release tags such as `v1.1.0`, mark production releases as GitHub's latest release, and attach the disk image. Drafts and prereleases are not offered. This checker compares the marketing version, so increment `HOSTSHIFT_VERSION` for each published update. Unconfigured builds report that updates are unavailable and make no update requests. Private repositories are not supported; no GitHub credentials are embedded in the app.
 
 The Developer ID can be supplied later through `HOSTSHIFT_SIGNING_IDENTITY`, alongside these variables. Before publishing downloads, sign and notarise the app and test helper registration after an upgrade. No release has been published by this setup. In-app installation through Sparkle remains future work, including its signed feed and coordination of unsaved edits and helper upgrades.

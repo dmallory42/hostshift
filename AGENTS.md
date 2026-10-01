@@ -7,6 +7,7 @@ Native macOS app for switching `/etc/hosts` between saved profiles. A privileged
 - Build: `./scripts/build.sh` produces `build/Hostshift.app`. It compiles with `swiftc` and packages the app and helper; `swift build` does not produce a runnable app.
 - Test: `./scripts/test.sh`. Run it after changing profile state, validation, persistence, installation or update checking. Register new check executables in that script.
 - Separate output or signed build: set `HOSTSHIFT_BUILD_DIR` and `HOSTSHIFT_SIGNING_IDENTITY`. See docs/development.md.
+- Release disk image: `./scripts/package-dmg.sh path/to/Hostshift.app` after the app is notarised and stapled. It scripts Finder to lay out the window.
 - If the compiler and SDK mismatch, set `SDKROOT` to a compatible SDK. Never commit a machine-specific SDK path.
 - Documentation-only changes need link, path and diff checks, not a rebuild.
 
