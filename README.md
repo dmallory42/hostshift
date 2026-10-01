@@ -9,7 +9,7 @@ Switch `/etc/hosts` configurations from a native macOS app or the menu bar. Keep
 
 ## Get started
 
-Requires macOS 14 or later and a Swift 6 toolchain. Build locally for now:
+Requires an Apple silicon Mac with macOS 14 or later, and a Swift 6 toolchain. Build locally for now:
 
 ```sh
 git clone https://github.com/dmallory42/hostshift.git

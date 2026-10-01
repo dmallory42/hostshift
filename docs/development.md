@@ -12,7 +12,7 @@ Requires macOS 14 or later and a Swift 6 compiler with a matching macOS SDK. No 
 open build/Hostshift.app
 ```
 
-The build script creates an app for the current machine's architecture. Without an Apple signing identity it creates an ad-hoc signed local build. The one-time setup installs a helper restricted to the current user and that exact build. It uses `swiftc` directly, so Xcode is optional. The package can also be opened in Xcode, or built with `swift build`; run the core checks with `swift run HostsCoreChecks`.
+The build script creates an app for Apple silicon Macs; Intel Macs are not supported. Without an Apple signing identity it creates an ad-hoc signed local build. The one-time setup installs a helper restricted to the current user and that exact build. It uses `swiftc` directly, so Xcode is optional. The package can also be opened in Xcode, or built with `swift build`; run the core checks with `swift run HostsCoreChecks`.
 
 If the compiler and SDK do not match, set `SDKROOT` to a compatible installed macOS SDK.
 
@@ -89,6 +89,6 @@ HOSTSHIFT_VERSION="1.1.0" HOSTSHIFT_BUILD_NUMBER="2" \
 ./scripts/build.sh
 ```
 
-Use numeric release tags such as `v1.1.0`, mark production releases as GitHub's latest release, and attach an app archive built for the intended architecture. Drafts and prereleases are not offered. This checker compares the marketing version, so increment `HOSTSHIFT_VERSION` for each published update. Unconfigured builds report that updates are unavailable and make no update requests. Private repositories are not supported; no GitHub credentials are embedded in the app.
+Use numeric release tags such as `v1.1.0`, mark production releases as GitHub's latest release, and attach the app archive. Drafts and prereleases are not offered. This checker compares the marketing version, so increment `HOSTSHIFT_VERSION` for each published update. Unconfigured builds report that updates are unavailable and make no update requests. Private repositories are not supported; no GitHub credentials are embedded in the app.
 
 The Developer ID can be supplied later through `HOSTSHIFT_SIGNING_IDENTITY`, alongside these variables. Before publishing downloads, sign and notarise the app and test helper registration after an upgrade. No release has been published by this setup. In-app installation through Sparkle remains future work, including its signed feed and coordination of unsaved edits and helper upgrades.

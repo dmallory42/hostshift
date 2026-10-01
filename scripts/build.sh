@@ -6,7 +6,7 @@ OUTPUT_DIR="${HOSTSHIFT_BUILD_DIR:-$PWD/build}"
 APP="$OUTPUT_DIR/Hostshift.app"
 MODULES="$OUTPUT_DIR/modules"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchDaemons" "$MODULES"
-ARCH=$(uname -m)
+ARCH=arm64
 TARGET="$ARCH-apple-macosx14.0"
 # Direct swiftc also works with Command Line Tools installations without Xcode.
 swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
