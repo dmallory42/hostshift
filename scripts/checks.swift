@@ -58,12 +58,12 @@ struct Checks {
         let target = folder.appending(path: "hosts")
         let payload = "# ' \" $(touch /tmp/hostshift-injection) `id` \\ café\n127.0.0.1 example.test\n"
         try original.write(to: target, atomically: true, encoding: .utf8)
-        func runInstall(content: String = payload, expected: String) throws -> (Int32, String) {
+        func runInstall(content: String = payload, expected: String, dnsRefresh: String = "/usr/bin/true") throws -> (Int32, String) {
             let script = HostsInstallScript.shell(content: content, expected: expected)
                 .replacing("/private/etc/", with: folder.path + "/")
                 .replacing("/usr/sbin/chown root:wheel", with: "/usr/bin/true")
                 .replacing("/usr/bin/dscacheutil -flushcache", with: "/usr/bin/true")
-                .replacing("/usr/bin/killall -HUP mDNSResponder", with: "/usr/bin/true")
+                .replacing("/usr/bin/killall -HUP mDNSResponder", with: dnsRefresh)
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
             process.arguments = ["-c", script]
@@ -95,6 +95,8 @@ struct Checks {
         check(latestBackup == payload, "Backup holds the file the latest switch replaced")
         let backups = try FileManager.default.contentsOfDirectory(atPath: folder.path).filter { $0.contains("hostshift-backup") }
         check(backups == ["hosts.hostshift-backup"], "Only one backup is kept")
+        let dnsFailure = try runInstall(content: payload, expected: second, dnsRefresh: "/usr/bin/false")
+        check(dnsFailure.0 == 0 && dnsFailure.1.trimmingCharacters(in: .whitespacesAndNewlines) == HostsInstallScript.dnsRefreshFailed, "DNS refresh failure still activates and reports the warning the app shows")
         try FileManager.default.removeItem(at: target)
         try FileManager.default.createSymbolicLink(at: target, withDestinationURL: backupURL)
         let symlink = try runInstall(expected: original)

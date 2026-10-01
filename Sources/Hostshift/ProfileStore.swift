@@ -15,7 +15,6 @@ final class ProfileStore {
     var isApplying = false
     private var drafts: [Profile] = []
     var hasUnsavedChanges: Bool { !drafts.isEmpty }
-    var status = "Profiles are saved on this Mac."
     @ObservationIgnored private var monitorTask: Task<Void, Never>?
     private let installer = HostsInstaller()
     private let libraryURL: URL
@@ -74,7 +73,6 @@ final class ProfileStore {
             library = updated
             return true
         } catch {
-            status = "Changes are not saved. Check disk access and try saving again."
             errorMessage = "Could not save your profiles: \(error.localizedDescription)"
             return false
         }
@@ -107,7 +105,6 @@ final class ProfileStore {
         }
         guard commit(updated) else { return false }
         drafts.removeAll { $0.id == id }
-        status = "Saved on this Mac. Activate to update /etc/hosts."
         return true
     }
 
@@ -117,7 +114,6 @@ final class ProfileStore {
         updated.profiles = profiles
         guard commit(updated) else { return false }
         drafts.removeAll()
-        status = "Saved on this Mac. Activate to update /etc/hosts."
         return true
     }
 
@@ -217,7 +213,7 @@ final class ProfileStore {
         isApplying = true
         defer { isApplying = false }
         do {
-            status = try await installer.apply(content: selected.content, expected: expected)
+            let message = try await installer.apply(content: selected.content, expected: expected)
             refresh()
             guard systemContent == selected.content else {
                 errorMessage = "The hosts file no longer matches the profile. Another app may have changed it."
@@ -228,6 +224,7 @@ final class ProfileStore {
                 updated.lastActivatedDigest = HostsInstallScript.digest(selected.content)
                 commit(updated)
             }
+            if message == HostsInstallScript.dnsRefreshFailed { errorMessage = message }
         } catch {
             refresh()
             errorMessage = error.localizedDescription

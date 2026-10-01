@@ -2,6 +2,8 @@ import Foundation
 import CryptoKit
 
 public enum HostsInstallScript {
+    public static let dnsRefreshFailed = "Activated. DNS cache could not be refreshed; some apps may need restarting."
+
     public static func digest(_ content: String) -> String {
         SHA256.hash(data: Data(content.utf8)).map { String(format: "%02x", $0) }.joined()
     }
@@ -31,7 +33,7 @@ public enum HostsInstallScript {
         if /usr/bin/dscacheutil -flushcache && /usr/bin/killall -HUP mDNSResponder; then
             echo 'Activated. DNS cache refreshed.'
         else
-            echo 'Activated. DNS cache could not be refreshed; some apps may need restarting.'
+            echo '\(dnsRefreshFailed)'
         fi
         """
     }
