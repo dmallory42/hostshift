@@ -16,6 +16,12 @@ final class SystemAccess {
 
     var isReady: Bool { status == .enabled && !isUpdating }
     var needsApproval: Bool { status == .requiresApproval }
+    /// Apple-signed builds register their helper with SMAppService, which needs the app in /Applications.
+    var needsApplicationsFolder: Bool { !isLocalBuild && !Self.isInApplicationsFolder(Bundle.main.bundleURL) }
+
+    nonisolated static func isInApplicationsFolder(_ url: URL) -> Bool {
+        url.standardizedFileURL.path.hasPrefix("/Applications/")
+    }
 
     init() {
         isLocalBuild = (try? HelperIdentity.peerRequirement(identifier: HelperIdentity.serviceName)) == nil
@@ -52,7 +58,7 @@ final class SystemAccess {
 
     func enable() async {
         refresh()
-        guard !requiresRestart else { return }
+        guard !requiresRestart, !needsApplicationsFolder else { return }
         errorMessage = nil
         isUpdating = true
         defer { isUpdating = false; refresh() }

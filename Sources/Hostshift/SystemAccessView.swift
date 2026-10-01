@@ -18,6 +18,9 @@ struct SystemAccessView: View {
                         .padding(.vertical, 8)
                 } else if access.isReady {
                     Button("Disable System Access") { Task { await access.disable() } }
+                } else if access.needsApplicationsFolder {
+                    Text("Move Hostshift to your Applications folder, then open it again to enable system access.")
+                        .font(.callout)
                 } else if !access.requiresRestart {
                     Button(access.needsApproval ? "Approve in System Settings…" : "Enable System Access…") {
                         Task { await access.enable() }
