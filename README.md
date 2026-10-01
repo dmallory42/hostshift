@@ -30,6 +30,8 @@ On first launch, choose **Enable System Access** and approve the helper installa
 
 You can also activate a profile from its right-click menu or the macOS menu bar. Invalid entries block activation, with clickable line numbers to help you fix them.
 
+If another app or a manual edit has changed `/etc/hosts`, Hostshift asks before replacing those changes. Choose **Save as Profile** to keep them.
+
 ## Your configuration
 
 Profiles stay on your Mac. Hostshift keeps your initial hosts file as **Original**. Each switch saves the file it replaces to `/private/etc/hosts.hostshift-backup`. Existing connections and apps with their own DNS caches may need restarting.

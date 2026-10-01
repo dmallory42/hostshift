@@ -29,6 +29,12 @@ struct Checks {
         library.preferredActiveID = duplicate.id
         check(library.activeID(matching: original) == duplicate.id, "Only one identical profile is active")
         check(library.activeID(matching: "# external\n") == nil, "External modifications clear active status")
+        check(!library.hasExternalChanges(in: original), "A saved profile's content is not an external change")
+        check(library.hasExternalChanges(in: "# external\n"), "Unsaved content from another app is an external change")
+        var edited = library
+        edited.lastActivatedDigest = HostsInstallScript.digest("127.0.0.1 before-save.test\n")
+        check(!edited.hasExternalChanges(in: "127.0.0.1 before-save.test\n"), "Saving edits to the active profile is not an external change")
+        check(!ProfileLibrary(original: "# first launch\n").hasExternalChanges(in: "# first launch\n"), "First launch has no external changes")
         let folder = FileManager.default.temporaryDirectory.appending(path: "hostshift-checks-\(UUID())")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -37,6 +43,12 @@ struct Checks {
         let loaded = try ProfileLibrary.load(from: url)
         check(loaded.profiles == library.profiles, "Profile persistence preserves exact content")
         check(loaded.preferredActiveID == duplicate.id, "Preferred active profile survives restart")
+        check(loaded.lastActivatedDigest == library.lastActivatedDigest, "Last activation survives restart")
+        var legacy = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+        legacy["lastActivatedDigest"] = nil
+        try JSONSerialization.data(withJSONObject: legacy).write(to: url)
+        let legacyLibrary = try ProfileLibrary.load(from: url)
+        check(legacyLibrary.lastActivatedDigest == nil && legacyLibrary.profiles == library.profiles, "Libraries saved before activation tracking still load")
         try Data("broken".utf8).write(to: url)
         do { _ = try ProfileLibrary.load(from: url); fatalError("Corrupt library accepted") }
         catch { check(true, "Corrupt library reported without overwriting") }

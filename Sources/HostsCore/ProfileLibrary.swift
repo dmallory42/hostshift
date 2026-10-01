@@ -3,11 +3,13 @@ import Foundation
 public struct ProfileLibrary: Codable, Sendable {
     public var profiles: [Profile]
     public var preferredActiveID: UUID?
+    public var lastActivatedDigest: String?
 
     public init(original: String) {
         let profile = Profile(name: "Original", content: original, isOriginal: true)
         profiles = [profile]
         preferredActiveID = profile.id
+        lastActivatedDigest = HostsInstallScript.digest(original)
     }
 
     public func activeID(matching content: String) -> UUID? {
@@ -16,6 +18,11 @@ public struct ProfileLibrary: Codable, Sendable {
             return preferredActiveID
         }
         return profiles.first(where: { $0.content == content })?.id
+    }
+
+    /// True when content matches neither a saved profile nor the last activation, so a switch would discard it.
+    public func hasExternalChanges(in content: String) -> Bool {
+        activeID(matching: content) == nil && lastActivatedDigest != HostsInstallScript.digest(content)
     }
 
     public static func load(from url: URL) throws -> Self {

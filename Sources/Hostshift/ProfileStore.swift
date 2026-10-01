@@ -206,6 +206,13 @@ final class ProfileStore {
         errorMessage = nil
         let issues = HostsValidator.issues(in: selected.content)
         guard issues.isEmpty else { errorMessage = issues.joined(separator: "\n"); return }
+        if library?.hasExternalChanges(in: expected) == true {
+            switch Self.askAboutExternalChanges(selected) {
+            case .cancel: return
+            case .replace: break
+            case .saveAsProfile: guard saveExternalChanges(expected) else { return }
+            }
+        }
         guard save(id: id) else { return }
         isApplying = true
         defer { isApplying = false }
@@ -218,6 +225,7 @@ final class ProfileStore {
             }
             if var updated = library {
                 updated.preferredActiveID = selected.id
+                updated.lastActivatedDigest = HostsInstallScript.digest(selected.content)
                 commit(updated)
             }
         } catch {
@@ -225,4 +233,38 @@ final class ProfileStore {
             errorMessage = error.localizedDescription
         }
     }
+
+    @discardableResult
+    func saveExternalChanges(_ content: String) -> Bool {
+        guard var updated = library else { return false }
+        let names = Set(profiles.map(\.name))
+        var name = "Copy of /etc/hosts"
+        var number = 2
+        while names.contains(name) {
+            name = "Copy of /etc/hosts (\(number))"
+            number += 1
+        }
+        updated.profiles.append(Profile(name: name, content: content))
+        return commit(updated)
+    }
+
+    private static func askAboutExternalChanges(_ profile: Profile) -> ExternalChangeChoice {
+        let alert = NSAlert()
+        alert.messageText = "/etc/hosts has changed outside Hostshift"
+        alert.informativeText = "Another app or a manual edit changed your hosts file. Activating “\(profile.name.isEmpty ? "Untitled" : profile.name)” will replace those changes."
+        alert.addButton(withTitle: "Save as Profile")
+        alert.addButton(withTitle: "Replace")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons[2].keyEquivalent = "\u{1b}"
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return .saveAsProfile
+        case .alertSecondButtonReturn: return .replace
+        default: return .cancel
+        }
+    }
+}
+
+enum ExternalChangeChoice {
+    case saveAsProfile, replace, cancel
 }

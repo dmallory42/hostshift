@@ -84,6 +84,17 @@ import HostsCore
         let beforeRenameSave = try ProfileLibrary.load(from: url)
         precondition(beforeRenameSave.profiles.first { $0.id == second.id }?.name == second.name)
         print("PASS renaming requires deliberate Save")
+        let selectionBeforeCapture = store.selection
+        precondition(store.saveExternalChanges("127.0.0.1 docker.test\n"))
+        let captured = try ProfileLibrary.load(from: url).profiles.last!
+        precondition(captured.name == "Copy of /etc/hosts" && captured.content == "127.0.0.1 docker.test\n")
+        precondition(store.selection == selectionBeforeCapture && store.isUnsaved(id: second.id))
+        print("PASS external changes save as a profile without saving drafts or changing selection")
+        precondition(store.saveExternalChanges("127.0.0.1 second.docker.test\n"))
+        precondition(store.saveExternalChanges("127.0.0.1 third.docker.test\n"))
+        let copies = try ProfileLibrary.load(from: url).profiles.map(\.name).filter { $0.hasPrefix("Copy of /etc/hosts") }
+        precondition(copies == ["Copy of /etc/hosts", "Copy of /etc/hosts (2)", "Copy of /etc/hosts (3)"])
+        print("PASS repeated copies of /etc/hosts get numbered names")
         try FileManager.default.removeItem(at: url)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
         precondition(!store.saveSelected())
