@@ -10,9 +10,11 @@ struct UpdateSettingsView: View {
                 Task { await updater.check() }
             }
             .disabled(updater.isChecking)
-            Text(updater.isConfigured ? "Checks GitHub once a day while Hostshift is open. Downloads open in your browser." : "Updates aren’t available for this build.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            if !updater.isConfigured {
+                Text("Updates aren’t available for this build.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding()
     }
