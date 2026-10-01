@@ -29,6 +29,7 @@ final class ProfileStore {
     func isUnsaved(id: UUID?) -> Bool { drafts.contains { $0.id == id } }
 
     var selected: Profile? { profiles.first { $0.id == selection } }
+    var activeProfile: Profile? { library?.profiles.first { $0.id == activeID } }
     var activeID: UUID? { systemContent.flatMap { library?.activeID(matching: $0) } }
 
     init(libraryURL: URL = URL.applicationSupportDirectory.appending(path: "Hostshift/profiles.json")) {
@@ -184,7 +185,7 @@ final class ProfileStore {
     func exportProfile() {
         guard let selected else { return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(selected.name).hosts"
+        panel.nameFieldStringValue = "\(selected.displayName).hosts"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try selected.content.write(to: url, atomically: true, encoding: .utf8) }
         catch { errorMessage = error.localizedDescription }
@@ -253,7 +254,7 @@ final class ProfileStore {
     private static func askAboutExternalChanges(_ profile: Profile) -> ExternalChangeChoice {
         let alert = NSAlert()
         alert.messageText = "/etc/hosts has changed outside Hostshift"
-        alert.informativeText = "Another app or a manual edit changed your hosts file. Activating “\(profile.name.isEmpty ? "Untitled" : profile.name)” will replace those changes."
+        alert.informativeText = "Another app or a manual edit changed your hosts file. Activating “\(profile.displayName)” will replace those changes."
         alert.addButton(withTitle: "Save as Profile")
         alert.addButton(withTitle: "Replace")
         alert.addButton(withTitle: "Cancel")
@@ -269,4 +270,8 @@ final class ProfileStore {
 
 enum ExternalChangeChoice {
     case saveAsProfile, replace, cancel
+}
+
+extension Profile {
+    var displayName: String { name.isEmpty ? "Untitled" : name }
 }

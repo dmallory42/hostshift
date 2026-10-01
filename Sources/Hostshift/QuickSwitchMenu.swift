@@ -31,9 +31,9 @@ struct QuickSwitchMenu: View {
                         switchProfile(profile.id)
                     } label: {
                         if store.activeID == profile.id {
-                            Text("✓ \(profile.name.isEmpty ? "Untitled" : profile.name) (Active)")
+                            Text("✓ \(profile.displayName) (Active)")
                         } else {
-                            Text(profile.name.isEmpty ? "Untitled" : profile.name)
+                            Text(profile.displayName)
                         }
                     }
                     .disabled(!store.canApply(profile))
@@ -52,9 +52,7 @@ struct QuickSwitchMenu: View {
 
     private var menuStatus: String {
         if store.isApplying { return "Activating profile…" }
-        if let active = store.library?.profiles.first(where: { $0.id == store.activeID }) {
-            return "Active: \(active.name.isEmpty ? "Untitled" : active.name)"
-        }
+        if let active = store.activeProfile { return "Active: \(active.displayName)" }
         return "Hostshift"
     }
 

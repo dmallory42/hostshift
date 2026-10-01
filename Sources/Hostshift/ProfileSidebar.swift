@@ -9,7 +9,7 @@ struct ProfileSidebar: View {
             Section("Profiles") {
                 ForEach(store.profiles) { profile in
                     HStack {
-                        Label(profile.name.isEmpty ? "Untitled" : profile.name,
+                        Label(profile.displayName,
                               systemImage: profile.isOriginal ? "clock.arrow.circlepath" : "doc.text")
                         if store.isUnsaved(id: profile.id) {
                             Image(systemName: "circle.fill")

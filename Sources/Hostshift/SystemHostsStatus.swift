@@ -5,8 +5,8 @@ struct SystemHostsStatus: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let active = store.library?.profiles.first(where: { $0.id == store.activeID }) {
-                Label("Active: \(active.name.isEmpty ? "Untitled" : active.name)", systemImage: "checkmark.circle")
+            if let active = store.activeProfile {
+                Label("Active: \(active.displayName)", systemImage: "checkmark.circle")
                     .foregroundStyle(.secondary)
                 Button("Show Active Profile") { store.selection = active.id }
                     .buttonStyle(.link)

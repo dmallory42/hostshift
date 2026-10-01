@@ -17,6 +17,8 @@ import HostsCore
         store.duplicate(id: first.id)
         precondition(store.selected?.content == first.content && store.selected?.name == "Copy of First")
         print("PASS duplicate targets clicked profile, not selection")
+        precondition(Profile(name: "", content: "").displayName == "Untitled" && first.displayName == "First")
+        print("PASS empty profile names display and export as Untitled")
         store.duplicate(id: first.id)
         precondition(store.selected?.name == "Copy of First (2)")
         store.add()
