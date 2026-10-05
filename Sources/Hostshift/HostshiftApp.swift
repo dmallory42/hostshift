@@ -42,7 +42,7 @@ struct HostshiftApp: App {
         MenuBarExtra(isInserted: $showMenuBarExtra) {
             QuickSwitchMenu(store: store)
         } label: {
-            Image(systemName: "arrow.triangle.swap")
+            Image(nsImage: .menuBarIcon)
                 .accessibilityLabel("Hostshift")
         }
         .menuBarExtraStyle(.menu)
