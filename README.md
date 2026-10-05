@@ -9,7 +9,18 @@ Switch `/etc/hosts` configurations from a native macOS app or the menu bar. Keep
 
 ## Get started
 
-Requires an Apple silicon Mac with macOS 14 or later, and a Swift 6 toolchain. Build locally for now:
+Requires an Apple silicon Mac with macOS 14 or later.
+
+1. Download the disk image from the [latest release](https://github.com/dmallory42/hostshift/releases/latest).
+2. Open it and drag Hostshift to Applications.
+3. Open Hostshift from Applications and choose **Enable System Access**.
+4. Allow Hostshift under **System Settings → General → Login Items & Extensions**.
+
+After setup, switching profiles doesn’t require a password. Hostshift needs to run from Applications to enable system access.
+
+### Build from source
+
+Building needs a Swift 6 toolchain:
 
 ```sh
 git clone https://github.com/dmallory42/hostshift.git
@@ -18,7 +29,7 @@ cd hostshift
 open build/Hostshift.app
 ```
 
-On first launch, choose **Enable System Access** and approve the helper installation. After setup, switching profiles doesn’t require a password. Local rebuilds require approval again.
+Local builds ask for administrator approval when you enable system access, and again after each rebuild.
 
 ## Switch hosts
 
