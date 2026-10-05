@@ -6,6 +6,10 @@ source scripts/sdk.sh
 APP="${1:?Usage: scripts/package-dmg.sh path/to/Hostshift.app [output.dmg]}"
 VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")
 OUTPUT="${2:-$(dirname "$APP")/Hostshift-$VERSION.dmg}"
+if [[ -d /Volumes/Hostshift ]]; then
+    echo "Eject the mounted Hostshift disk image first; Finder cannot lay out two volumes with the same name." >&2
+    exit 1
+fi
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/hostshift-dmg.XXXXXX")
 trap 'hdiutil detach "$WORK/mount" -quiet 2>/dev/null || true; rm -rf "$WORK"' EXIT
 
