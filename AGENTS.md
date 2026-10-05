@@ -31,6 +31,7 @@ Native macOS app for switching `/etc/hosts` between saved profiles. A privileged
 - A successful compile does not verify focus, menus or layout. Build and exercise the changed interaction.
 - From a terminal, drive the app with System Events UI scripting and capture its window with `screencapture -l <window id>`. Click buttons and menu items instead of sending keystrokes, because a keystroke goes to whichever app is frontmost, which may be the terminal. SwiftUI buttons often expose no accessibility title, so address them by position.
 - Local builds pin the helper to the exact app signature, so every rebuild needs system access approved again. Do not rebuild while the app is open or during an administrator prompt.
+- Local and release builds share the helper label. Enabling access in a local build replaces the installed release app's helper, so on a Mac using the release app, keep local builds away from their setup panel or re-enable access in the release app afterwards.
 - `open build/Hostshift.app` does not restart a running process. Confirm the old process has exited before claiming new code is loaded.
 
 ## Product behaviour
