@@ -27,12 +27,8 @@ struct QuickSwitchMenu: View {
         } else {
             Section("Switch Profile") {
                 ForEach(store.profiles) { profile in
-                    Button {
-                        switchProfile(profile.id)
-                    } label: {
-                        Text(store.activeID == profile.id ? "✓ \(profile.displayName)" : profile.displayName)
-                    }
-                    .disabled(!store.canApply(profile))
+                    Toggle(profile.displayName, isOn: Binding(get: { store.activeID == profile.id }, set: { _ in switchProfile(profile.id) }))
+                        .disabled(!store.canApply(profile))
                 }
             }
         }
