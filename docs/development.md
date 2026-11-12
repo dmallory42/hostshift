@@ -43,9 +43,9 @@ Then package the stapled app as a drag-to-Applications disk image, and notarise 
 ```sh
 HOSTSHIFT_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 ./scripts/package-dmg.sh build/Hostshift.app
-xcrun notarytool submit build/Hostshift-1.0.1.dmg --keychain-profile Hostshift-notary --wait
-xcrun stapler staple build/Hostshift-1.0.1.dmg
-spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.0.1.dmg
+xcrun notarytool submit build/Hostshift-1.1.0.dmg --keychain-profile Hostshift-notary --wait
+xcrun stapler staple build/Hostshift-1.1.0.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.1.0.dmg
 ```
 
 The disk image is named after the app's version. `package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
