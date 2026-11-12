@@ -56,7 +56,8 @@ struct Checks {
         // Run the actual install shell against an isolated directory. Only the fixed
         // target, root ownership and DNS operations are substituted for this check.
         let target = folder.appending(path: "hosts")
-        let payload = "# ' \" $(touch /tmp/hostshift-injection) `id` \\ café\n127.0.0.1 example.test\n"
+        let canary = folder.appending(path: "injected")
+        let payload = "# ' \" $(touch \(canary.path)) `id` \\ café\n127.0.0.1 example.test\n"
         try original.write(to: target, atomically: true, encoding: .utf8)
         func runInstall(content: String = payload, expected: String, dnsRefresh: String = "/usr/bin/true") throws -> (Int32, String) {
             let script = HostsInstallScript.shell(content: content, expected: expected)
@@ -79,6 +80,7 @@ struct Checks {
         check(applied.0 == 0, "Install shell succeeds: \(applied.1)")
         let installed = try String(contentsOf: target, encoding: .utf8)
         check(installed == payload, "Shell metacharacters and Unicode round-trip literally")
+        check(!FileManager.default.fileExists(atPath: canary.path), "Profile text is never run as a shell command")
         let backupURL = folder.appending(path: "hosts.hostshift-backup")
         let backup = try String(contentsOf: backupURL, encoding: .utf8)
         check(backup == original, "Backup preserves prior hosts")
