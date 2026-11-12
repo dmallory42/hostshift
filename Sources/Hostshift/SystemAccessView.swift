@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SystemAccessView: View {
-    @Bindable var access: SystemAccess
+    let access: SystemAccess
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {

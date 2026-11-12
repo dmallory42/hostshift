@@ -14,7 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "Save All")
         alert.addButton(withTitle: "Cancel")
         alert.addButton(withTitle: "Don’t Save")
-        alert.buttons[1].keyEquivalent = "\u{1b}"
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             return store.saveAll() ? .terminateNow : .terminateCancel

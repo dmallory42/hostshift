@@ -1,5 +1,4 @@
 import SwiftUI
-import HostsCore
 
 struct HostsTextEditor: NSViewRepresentable {
     @Binding var text: String

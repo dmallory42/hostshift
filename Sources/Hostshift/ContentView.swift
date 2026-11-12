@@ -46,7 +46,7 @@ struct ContentView: View {
                         .disabled(store.selected.map { !store.canApply($0) } ?? true)
                     }
                 }
-                .disabled(store.isApplying || !store.systemAccess.isReady)
+                .disabled(store.isApplying)
             }
         }
         .overlay { if store.isApplying { ProgressView("Activating hosts profile…").padding().background(.regularMaterial, in: .rect(cornerRadius: 12)) } }

@@ -258,7 +258,6 @@ final class ProfileStore {
         alert.addButton(withTitle: "Save as Profile")
         alert.addButton(withTitle: "Replace")
         alert.addButton(withTitle: "Cancel")
-        alert.buttons[2].keyEquivalent = "\u{1b}"
         NSApplication.shared.activate(ignoringOtherApps: true)
         switch alert.runModal() {
         case .alertFirstButtonReturn: return .saveAsProfile
