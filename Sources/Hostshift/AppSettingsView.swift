@@ -15,6 +15,6 @@ struct AppSettingsView: View {
             SystemAccessView(access: store.systemAccess)
         }
         .frame(width: 440)
-        .disabled(store.isApplying)
+        .disabled(store.isBusy)
     }
 }

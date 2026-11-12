@@ -19,7 +19,7 @@ struct HostshiftApp: App {
             ContentView(store: store)
                 .onAppear {
                     appDelegate.store = store
-                    updater.canPresent = { !store.isBusy && !store.showSystemAccessSetup }
+                    updater.canPresent = { !store.isBusy }
                 }
                 .task {
                     while !Task.isCancelled {
