@@ -9,6 +9,6 @@ let package = Package(
         .target(name: "HostsCore"),
         .executableTarget(name: "Hostshift", dependencies: ["HostsCore"]),
         .executableTarget(name: "HostshiftHelper", dependencies: ["HostsCore"]),
-        .executableTarget(name: "HostsCoreChecks", dependencies: ["HostsCore"], path: "scripts", exclude: ["build.sh", "test.sh", "icon.swift", "helper-checks.swift", "sdk.sh"], sources: ["checks.swift"])
+        .executableTarget(name: "HostsCoreChecks", dependencies: ["HostsCore"], path: "scripts", exclude: ["build.sh", "test.sh", "sdk.sh", "package-dmg.sh", "icon.swift", "dmg-background.swift", "helper-checks.swift", "profile-checks.swift", "editor-checks.swift", "update-checks.swift"], sources: ["checks.swift"])
     ]
 )
