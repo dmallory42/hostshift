@@ -12,10 +12,21 @@ public enum HostsValidator {
             issues.append(HostsDiagnostic(line: nil, message: "Keep profiles under 96 KB."))
         }
         if content.contains("\0") { issues.append(HostsDiagnostic(line: nil, message: "Remove null characters.")) }
-        for (index, range) in HostsLines.ranges(in: content).enumerated() {
-            let line = (content as NSString).substring(with: range)
+        let text = content as NSString
+        let lines = HostsLines.ranges(in: content)
+        for (index, range) in lines.enumerated() {
+            // The editor numbers lines at every Unicode line break, but macOS only ends a hosts line at LF.
+            if index + 1 < lines.count {
+                let end = NSMaxRange(range)
+                let lineBreak = text.substring(with: NSRange(location: end, length: lines[index + 1].location - end))
+                if lineBreak != "\n" && lineBreak != "\r\n" {
+                    issues.append(HostsDiagnostic(line: index + 1, message: "ends with a line break macOS does not recognise. Use a standard line ending."))
+                }
+            }
+            let line = text.substring(with: range)
             let entry = line.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0]
-            let fields = entry.split(whereSeparator: { $0.isWhitespace })
+            // hosts(5) separates fields with spaces and tabs only, so other whitespace stays part of a field.
+            let fields = entry.split(whereSeparator: { $0 == " " || $0 == "\t" })
             guard !fields.isEmpty else { continue }
             var ipv4 = in_addr()
             var ipv6 = in6_addr()

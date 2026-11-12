@@ -66,7 +66,7 @@ Administrator approval happens during helper setup. Later switches use authentic
 
 The command contains base64-encoded content, so profile text is never interpreted as shell syntax. DNS caches are refreshed after a successful switch; a cache refresh failure is reported separately. An unavailable helper reports an error and refreshes the system file without claiming success.
 
-Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block activation. Hostnames must use ASCII or punycode. This small app limits activation and imports to 96 KB to keep the helper command within system limits. Empty or comment-only profiles are valid and deliberately remove all mappings when activated.
+Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block activation. Fields are separated by spaces or tabs, and lines end with LF or CRLF. Hostnames must use ASCII or punycode. This small app limits activation and imports to 96 KB to keep the helper command within system limits. Empty or comment-only profiles are valid and deliberately remove all mappings when activated.
 
 ## Verification
 

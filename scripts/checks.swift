@@ -21,7 +21,10 @@ struct Checks {
         check(HostsLines.ranges(in: "# comment\n\n").count == 3, "Blank and trailing lines are numbered")
         check(HostsLines.ranges(in: "# 😀\r\ninvalid").map(\.location) == [0, 6], "UTF-16 offsets and CRLF line boundaries")
         check(HostsValidator.issues(in: "# comment\r\ninvalid").first?.hasPrefix("Line 2:") == true, "CRLF errors match editor line numbers")
-        check(HostsValidator.issues(in: "# comment\rinvalid").first?.hasPrefix("Line 2:") == true, "CR errors match editor line numbers")
+        check(HostsValidator.diagnostics(in: "# comment\rinvalid").map(\.line) == [1, 2], "A lone CR is flagged and later errors match editor line numbers")
+        check(!HostsValidator.issues(in: "127.0.0.1 a.test\u{2028}127.0.0.2 b.test\n").isEmpty, "Reject line breaks macOS does not recognise")
+        check(!HostsValidator.issues(in: "127.0.0.1\u{A0}example.test").isEmpty && !HostsValidator.issues(in: "127.0.0.1 a.test\u{0C}b.test").isEmpty, "Only spaces and tabs separate fields")
+        check(HostsValidator.issues(in: "127.0.0.1 a.test\r\n::1\tb.test\n# \u{A0}note\u{3000}\n").isEmpty, "CRLF, tabs and unusual whitespace in comments stay valid")
         let original = "127.0.0.1 localhost\n::1 localhost\n"
         var library = ProfileLibrary(original: original)
         let duplicate = Profile(name: "Work", content: original)
