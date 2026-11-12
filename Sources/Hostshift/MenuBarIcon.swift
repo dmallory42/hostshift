@@ -2,7 +2,7 @@ import AppKit
 
 extension NSImage {
     /// The app icon's shifted H as an 18-point template image, so macOS tints it for the menu bar.
-    @MainActor static var menuBarIcon: NSImage {
+    @MainActor static let menuBarIcon: NSImage = {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
             // Shapes match scripts/icon.swift, scaled from the H's 378 × 510-point bounds on its 1024-point canvas.
             let scale = 14.0 / 510
@@ -17,5 +17,5 @@ extension NSImage {
         }
         image.isTemplate = true
         return image
-    }
+    }()
 }
