@@ -81,7 +81,7 @@ struct HelperChecks {
         let executable = directory.appending(path: "helper ' $(touch untrusted) `.bin")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: CommandLine.arguments[0]), to: executable)
         let shell = try LocalSetupScript.install(helperURL: executable, registration: registration)
-        func run(_ script: String) throws -> Int32 {
+        func run(_ script: String, expectingFailure: Bool = false) throws -> Int32 {
             let isolated = script
                 .replacing("/Library/", with: directory.path + "/Library/")
                 .replacing("/usr/sbin/chown root:wheel", with: "/usr/bin/true")
@@ -90,6 +90,7 @@ struct HelperChecks {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
             process.arguments = ["-c", isolated]
+            if expectingFailure { process.standardError = FileHandle.nullDevice }
             try process.run()
             process.waitUntilExit()
             return process.terminationStatus
@@ -107,7 +108,7 @@ struct HelperChecks {
         var wrongIdentity = registration
         wrongIdentity.helperRequirement = "identifier \"invalid.hostshift.helper\""
         let rejectedScript = try LocalSetupScript.install(helperURL: executable, registration: wrongIdentity)
-        let rejectedInstall = try run(rejectedScript)
+        let rejectedInstall = try run(rejectedScript, expectingFailure: true)
         precondition(rejectedInstall != 0)
         let preserved = try JSONDecoder().decode(LocalRegistration.self, from: Data(contentsOf: directory.appending(path: String(LocalRegistration.path.dropFirst()))))
         precondition(preserved == registration)
