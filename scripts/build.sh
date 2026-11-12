@@ -5,6 +5,7 @@ source scripts/sdk.sh
 OUTPUT_DIR="${HOSTSHIFT_BUILD_DIR:-$PWD/build}"
 APP="$OUTPUT_DIR/Hostshift.app"
 MODULES="$OUTPUT_DIR/modules"
+rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/LaunchDaemons" "$MODULES"
 ARCH=arm64
 TARGET="$ARCH-apple-macosx14.0"
@@ -30,8 +31,12 @@ fi
 if [[ -n "${HOSTSHIFT_BUILD_NUMBER:-}" ]]; then
     plutil -replace CFBundleVersion -string "$HOSTSHIFT_BUILD_NUMBER" "$APP/Contents/Info.plist"
 fi
-swift scripts/icon.swift "$OUTPUT_DIR"
-iconutil -c icns "$OUTPUT_DIR/Hostshift.iconset" -o "$APP/Contents/Resources/Hostshift.icns"
+ICON="$OUTPUT_DIR/Hostshift.icns"
+if [[ ! -f "$ICON" || scripts/icon.swift -nt "$ICON" ]]; then
+    swift scripts/icon.swift "$OUTPUT_DIR"
+    iconutil -c icns "$OUTPUT_DIR/Hostshift.iconset" -o "$ICON"
+fi
+cp "$ICON" "$APP/Contents/Resources/Hostshift.icns"
 SIGNING_IDENTITY="${HOSTSHIFT_SIGNING_IDENTITY:--}"
 codesign --force --options runtime --identifier dev.dmallory.hostshift.helper --sign "$SIGNING_IDENTITY" "$APP/Contents/MacOS/HostshiftHelper"
 codesign --force --options runtime --sign "$SIGNING_IDENTITY" "$APP"
