@@ -185,7 +185,7 @@ final class ProfileStore {
     func exportProfile() {
         guard let selected else { return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(selected.displayName).hosts"
+        panel.nameFieldStringValue = selected.exportFileName
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try selected.content.write(to: url, atomically: true, encoding: .utf8) }
         catch { errorMessage = error.localizedDescription }
@@ -274,4 +274,6 @@ enum ExternalChangeChoice {
 
 extension Profile {
     var displayName: String { name.isEmpty ? "Untitled" : name }
+    /// The save panel and Finder treat slashes and colons as path separators.
+    var exportFileName: String { displayName.replacing("/", with: "-").replacing(":", with: "-") + ".hosts" }
 }
