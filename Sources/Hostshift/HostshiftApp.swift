@@ -31,7 +31,6 @@ struct HostshiftApp: App {
         .defaultSize(width: 940, height: 620)
         .commands {
             ProfileCommands(store: store)
-            ProfileSaveCommands(store: store)
             CommandGroup(after: .appInfo) {
                 Button(updater.isChecking ? "Checking for Updates…" : "Check for Updates…") {
                     Task { await updater.check() }

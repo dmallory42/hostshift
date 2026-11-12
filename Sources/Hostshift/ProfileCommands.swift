@@ -26,5 +26,13 @@ struct ProfileCommands: Commands {
             Button("Export Profile…") { store.exportProfile() }
                 .disabled(unavailable || store.selected == nil)
         }
+        CommandGroup(replacing: .saveItem) {
+            Button("Save") { store.saveSelected() }
+                .keyboardShortcut("s")
+                .disabled(store.isApplying || !store.isUnsaved(id: store.selection))
+            Button("Save All") { store.saveAll() }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .disabled(store.isApplying || !store.hasUnsavedChanges)
+        }
     }
 }
