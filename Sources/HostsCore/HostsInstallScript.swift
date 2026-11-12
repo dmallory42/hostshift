@@ -12,13 +12,14 @@ public enum HostsInstallScript {
         // Only base64 and a SHA-256 digest enter the privileged script, never raw user text.
         let payload = Data(content.utf8).base64EncodedString()
         let hash = digest(expected)
+        // openssl prints the digest alone or after a "(stdin)= " label, depending on its version.
         return """
         set -eu
         export PATH=/usr/bin:/bin:/usr/sbin:/sbin
         target=/private/etc/hosts
         [ -f "$target" ] && [ ! -L "$target" ] || { echo 'The hosts file must be a regular file.' >&2; exit 1; }
-        actual=$(/usr/bin/shasum -a 256 "$target")
-        [ "${actual%% *}" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
+        actual=$(/usr/bin/openssl dgst -sha256 < "$target")
+        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
         temporary=$(/usr/bin/mktemp /private/etc/.hostshift.XXXXXX)
         backup=$(/usr/bin/mktemp /private/etc/.hostshift-backup.XXXXXX)
         trap '/bin/rm -f "$temporary" "$backup"' EXIT
@@ -26,8 +27,8 @@ public enum HostsInstallScript {
         /usr/sbin/chown root:wheel "$temporary"
         /bin/chmod 644 "$temporary"
         /bin/cp -p "$target" "$backup"
-        actual=$(/usr/bin/shasum -a 256 "$target")
-        [ "${actual%% *}" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
+        actual=$(/usr/bin/openssl dgst -sha256 < "$target")
+        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
         /bin/mv -f "$backup" /private/etc/hosts.hostshift-backup
         /bin/mv -f "$temporary" "$target"
         if /usr/bin/dscacheutil -flushcache && /usr/bin/killall -HUP mDNSResponder; then
