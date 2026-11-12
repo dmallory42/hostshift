@@ -56,7 +56,7 @@ struct ContentView: View {
         .sheet(item: $store.profileToRename) { profile in
             ProfileRenameSheet(profile: profile, store: store)
         }
-        .confirmationDialog("Delete “\(store.profileToDelete?.name ?? "")”?", isPresented: $store.showDeleteConfirmation, titleVisibility: .visible) {
+        .confirmationDialog("Delete “\(store.profileToDelete?.displayName ?? "")”?", isPresented: $store.showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete Profile", role: .destructive) {
                 if let id = store.profileToDelete?.id { store.delete(id: id) }
                 store.profileToDelete = nil
