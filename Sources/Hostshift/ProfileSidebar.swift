@@ -50,7 +50,7 @@ struct ProfileSidebar: View {
             }
         }
         .onDeleteCommand { store.requestDelete(id: store.selection) }
-        .onKeyPress(keys: [.delete, KeyEquivalent("\u{8}")], phases: .down) { press in
+        .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             guard press.modifiers.isEmpty else { return .ignored }
             store.requestDelete(id: store.selection)
             return .handled
