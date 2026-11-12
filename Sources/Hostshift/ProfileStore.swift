@@ -128,7 +128,7 @@ final class ProfileStore {
 
     func duplicate(id: UUID? = nil) {
         guard let profile = profiles.first(where: { $0.id == (id ?? selection) }) else { return }
-        add(name: "Copy of \(profile.name)", content: profile.content)
+        add(name: "Copy of \(profile.displayName)", content: profile.content)
     }
 
     func requestRename(id: UUID?) {
