@@ -65,7 +65,17 @@ struct HelperChecks {
         withExtendedLifetime(allowedDelegate) {}
         print("PASS: XPC accepts the pinned local build and reaches helper validation")
         try checkLocalSetup(requirement: allowedRequirement)
-        print("8 helper checks passed. No privileged operations were performed.")
+        checkIdleExit()
+        print("9 helper checks passed. No privileged operations were performed.")
+    }
+    static func checkIdleExit() {
+        let exited = DispatchSemaphore(value: 0)
+        let idle = IdleExit(after: 0.2) { exited.signal() }
+        idle.begin()
+        precondition(exited.wait(timeout: .now() + 0.6) == .timedOut)
+        idle.end()
+        precondition(exited.wait(timeout: .now() + 2) == .success)
+        print("PASS: Helper stays up during a request and exits once idle")
     }
     static func checkLocalSetup(requirement: String) throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "hostshift-setup-\(UUID())")

@@ -3,8 +3,13 @@ import HostsCore
 
 final class HelperService: NSObject, HelperProtocol {
     private let lock = NSLock()
+    private let idleExit: IdleExit?
+
+    init(idleExit: IdleExit? = nil) { self.idleExit = idleExit }
 
     func apply(content: String, expected: String, reply: @escaping @Sendable (String?, String?) -> Void) {
+        idleExit?.begin()
+        defer { idleExit?.end() }
         lock.lock()
         defer { lock.unlock() }
         guard expected.utf8.count <= 1_048_576 else { reply(nil, "The current hosts file is too large."); return }

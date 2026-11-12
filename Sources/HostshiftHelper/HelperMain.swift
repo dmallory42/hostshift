@@ -16,7 +16,9 @@ struct HelperMain {
             requirement = try HelperIdentity.peerRequirement(identifier: "dev.dmallory.hostshift")
             allowedUser = nil
         }
-        let delegate = HelperDelegate(requirement: requirement, allowedUser: allowedUser)
+        // launchd delays restarting a job that ran for under 10 seconds, so the quiet period stays well above that.
+        let idleExit = IdleExit(after: 30) { exit(0) }
+        let delegate = HelperDelegate(requirement: requirement, allowedUser: allowedUser, idleExit: idleExit)
         let listener = NSXPCListener(machServiceName: HelperIdentity.serviceName)
         listener.setConnectionCodeSigningRequirement(requirement)
         listener.delegate = delegate

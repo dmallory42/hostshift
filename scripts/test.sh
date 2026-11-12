@@ -20,7 +20,8 @@ run_checks() {
 
 run_checks checks
 run_checks helper-checks \
-    Sources/HostshiftHelper/HelperService.swift Sources/HostshiftHelper/HelperDelegate.swift
+    Sources/HostshiftHelper/HelperService.swift Sources/HostshiftHelper/HelperDelegate.swift \
+    Sources/HostshiftHelper/IdleExit.swift
 run_checks profile-checks \
     Sources/Hostshift/ProfileStore.swift Sources/Hostshift/SystemAccess.swift \
     Sources/Hostshift/LocalSetup.swift Sources/Hostshift/HostsInstaller.swift \
