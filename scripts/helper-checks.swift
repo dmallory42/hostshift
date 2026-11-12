@@ -134,6 +134,7 @@ struct HelperChecks {
         let removed = try run(LocalSetupScript.uninstall)
         precondition(removed == 0)
         precondition(!FileManager.default.fileExists(atPath: copied.path))
+        precondition(!FileManager.default.fileExists(atPath: directory.appending(path: String(LocalRegistration.directory.dropFirst())).path))
         print("PASS: Setup AppleScript compiles and removal cleans up the isolated helper")
     }
 

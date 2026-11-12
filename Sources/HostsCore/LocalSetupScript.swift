@@ -53,6 +53,7 @@ public enum LocalSetupScript {
             /bin/launchctl bootout system/dev.dmallory.hostshift.helper
         fi
         /bin/rm -f '\(LocalRegistration.daemon)' '\(LocalRegistration.executable)' '\(LocalRegistration.path)'
+        /bin/rmdir '\(LocalRegistration.directory)' 2>/dev/null || true
         """
     }
 
