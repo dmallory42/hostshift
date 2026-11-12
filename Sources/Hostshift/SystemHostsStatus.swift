@@ -22,7 +22,7 @@ struct SystemHostsStatus: View {
             } else {
                 Label("System hosts unavailable", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
-                Button("Try Again") { store.refresh() }
+                Button("Try Again") { store.refresh(reportingRepeatedFailure: true) }
                     .buttonStyle(.link)
             }
         }

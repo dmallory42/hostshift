@@ -47,18 +47,8 @@ final class ProfileStore {
         self.systemAccess = systemAccess
         self.install = install
         self.askAboutExternalChanges = askAboutExternalChanges
-        do {
-            let current = try String(contentsOf: hostsURL, encoding: .utf8)
-            systemContent = current
-            if FileManager.default.fileExists(atPath: libraryURL.path) {
-                library = try ProfileLibrary.load(from: libraryURL)
-            } else {
-                let initial = ProfileLibrary(original: current)
-                try initial.save(to: libraryURL)
-                library = initial
-            }
-            selection = activeID ?? profiles.first?.id
-        } catch { errorMessage = "Could not open your profiles: \(error.localizedDescription)" }
+        readSystemHosts(reportingRepeatedFailure: true)
+        loadLibrary()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(3)) } catch { return }
@@ -75,10 +65,38 @@ final class ProfileStore {
             (profile.id != activeID || isUnsaved(id: profile.id)) && HostsValidator.issues(in: profile.content).isEmpty
     }
 
-    func refresh() {
+    func refresh(reportingRepeatedFailure: Bool = false) {
         systemAccess.refresh()
-        do { systemContent = try String(contentsOf: hostsURL, encoding: .utf8) }
-        catch { systemContent = nil; errorMessage = error.localizedDescription }
+        readSystemHosts(reportingRepeatedFailure: reportingRepeatedFailure)
+    }
+
+    /// The monitor polls every few seconds, so a read failure is reported when the file stops being readable, not on every poll.
+    private func readSystemHosts(reportingRepeatedFailure: Bool = false) {
+        let wasUnavailable = systemContent == nil
+        do {
+            let current = try String(contentsOf: hostsURL, encoding: .utf8)
+            if systemContent != current { systemContent = current }
+            if wasUnavailable && library == nil && !FileManager.default.fileExists(atPath: libraryURL.path) { loadLibrary() }
+        } catch {
+            guard !wasUnavailable || reportingRepeatedFailure else { return }
+            systemContent = nil
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Loads the saved library. On first launch it snapshots the hosts file as Original, once that file is readable.
+    private func loadLibrary() {
+        guard library == nil else { return }
+        do {
+            if FileManager.default.fileExists(atPath: libraryURL.path) {
+                library = try ProfileLibrary.load(from: libraryURL)
+            } else if let systemContent {
+                let initial = ProfileLibrary(original: systemContent)
+                try initial.save(to: libraryURL)
+                library = initial
+            } else { return }
+            selection = activeID ?? profiles.first?.id
+        } catch { errorMessage = "Could not open your profiles: \(error.localizedDescription)" }
     }
 
     @discardableResult

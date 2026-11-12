@@ -194,5 +194,30 @@ import HostsCore
         let afterFailedSave = try systemHosts()
         precondition(afterFailedSave == stagingEdit.content && store.isUnsaved(id: second.id))
         print("PASS a failed save stops the install")
+
+        let unreadable = directory.appending(path: "hosts-latin1")
+        try Data([0x23, 0x20, 0xE9, 0x0A]).write(to: unreadable)
+        let firstLaunchURL = directory.appending(path: "first-launch/profiles.json")
+        let firstLaunch = ProfileStore(libraryURL: firstLaunchURL, hostsURL: unreadable, systemAccess: SystemAccess(fixedStatus: .enabled))
+        precondition(firstLaunch.library == nil && firstLaunch.systemContent == nil && firstLaunch.errorMessage != nil)
+        firstLaunch.errorMessage = nil
+        firstLaunch.refresh()
+        precondition(firstLaunch.errorMessage == nil)
+        firstLaunch.refresh(reportingRepeatedFailure: true)
+        precondition(firstLaunch.errorMessage != nil)
+        firstLaunch.errorMessage = nil
+        try "127.0.0.1 localhost\n".write(to: unreadable, atomically: true, encoding: .utf8)
+        firstLaunch.refresh()
+        precondition(firstLaunch.library?.profiles.map(\.content) == ["127.0.0.1 localhost\n"] && firstLaunch.selection != nil && firstLaunch.errorMessage == nil)
+        try Data([0xE9]).write(to: unreadable)
+        firstLaunch.refresh()
+        precondition(firstLaunch.systemContent == nil && firstLaunch.errorMessage != nil)
+        firstLaunch.errorMessage = nil
+        firstLaunch.refresh()
+        precondition(firstLaunch.errorMessage == nil)
+        print("PASS an unreadable hosts file is reported once, and Original is captured when it becomes readable")
+        let relaunch = ProfileStore(libraryURL: firstLaunchURL, hostsURL: unreadable, systemAccess: SystemAccess(fixedStatus: .enabled))
+        precondition(relaunch.library?.profiles.count == 1 && relaunch.systemContent == nil && relaunch.selection != nil)
+        print("PASS saved profiles still load while the hosts file is unreadable")
     }
 }
