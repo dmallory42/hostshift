@@ -9,7 +9,7 @@ struct ContentView: View {
         Group {
             // A full-window panel rather than a sheet: macOS refuses to quit an app while a sheet is open.
             if store.showSystemAccessSetup {
-                SystemAccessSetupSheet(access: store.systemAccess)
+                SystemAccessSetupPanel(access: store.systemAccess)
                     .background(.regularMaterial, in: .rect(cornerRadius: 12))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

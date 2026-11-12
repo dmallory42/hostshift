@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SystemAccessSetupSheet: View {
+struct SystemAccessSetupPanel: View {
     let access: SystemAccess
 
     var body: some View {
