@@ -47,7 +47,7 @@ If another app or a manual edit has changed `/etc/hosts`, Hostshift asks before 
 
 Profiles stay on your Mac. Hostshift keeps your initial hosts file as **Original**. Each switch saves the file it replaces to `/private/etc/hosts.hostshift-backup`. Existing connections and apps with their own DNS caches may need restarting.
 
-To uninstall, activate **Original** if you want to restore it, then choose **Settings → Disable System Access** before deleting the app.
+To uninstall, activate **Original** if you want to restore it, then choose **Settings → Disable System Access** before deleting the app. The last backup stays at `/private/etc/hosts.hostshift-backup`; remove it with `sudo rm` if you no longer need it.
 
 ## Updates and development
 
