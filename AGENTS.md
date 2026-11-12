@@ -24,7 +24,7 @@ Native macOS app for switching `/etc/hosts` between saved profiles. A privileged
 - IMPORTANT: Confirm with the user before activating a real profile, writing `/etc/hosts`, installing or removing the real helper, or deleting root-owned files. Describe the steps and how the system will be restored, then wait for approval.
 - Tests use temporary profile libraries and substituted installation paths, never the real hosts file or helper.
 - Never save or discard the user's drafts to make a test easier. Quit Hostshift normally and respect its unsaved-changes prompt; do not force-kill it.
-- Preserve the helper's protections: XPC code-signing checks, independent validation of every request, conflict detection, the backup, atomic replacement and read-back verification. The helper must never accept a path or shell command from a client.
+- Preserve the helper's protections: XPC code-signing checks, independent validation of every request, conflict detection, the backup and atomic replacement. Keep the app's read-back check after each switch too. The helper must never accept a path or shell command from a client.
 
 ## Verifying UI changes
 

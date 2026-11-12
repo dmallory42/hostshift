@@ -43,18 +43,18 @@ Then package the stapled app as a drag-to-Applications disk image, and notarise 
 ```sh
 HOSTSHIFT_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 ./scripts/package-dmg.sh build/Hostshift.app
-xcrun notarytool submit build/Hostshift-1.0.dmg --keychain-profile Hostshift-notary --wait
-xcrun stapler staple build/Hostshift-1.0.dmg
-spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.0.dmg
+xcrun notarytool submit build/Hostshift-1.0.1.dmg --keychain-profile Hostshift-notary --wait
+xcrun stapler staple build/Hostshift-1.0.1.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.0.1.dmg
 ```
 
-`package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
+The disk image is named after the app's version. `package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
 
 Local builds install the helper in `/Library/PrivilegedHelperTools/dev.dmallory.hostshift.helper`, its launch daemon in `/Library/LaunchDaemons/dev.dmallory.hostshift.helper.plist`, and its pinned identities in `/Library/Application Support/Hostshift/registration.json`. These files are root-owned. The helper is loaded on demand by launchd and survives app restarts. Rebuilding the app requires enabling access again because the local signature changes. Hostshift verifies the staged helper signature before installing it.
 
 Apple-signed builds instead use `SMAppService`. Approve the helper once under **System Settings → General → Login Items & Extensions**. Hostshift shows pending, enabled and revoked states.
 
-Use **Hostshift → Settings → Disable System Access** before uninstalling or changing installation methods. For the local build, removal also requests administrator authorisation. Disabling access leaves the current hosts file untouched; apply Original first if you want to restore it. After updating a signed helper, disable and enable access to re-register it.
+Use **Hostshift → Settings → Disable System Access** before uninstalling or changing installation methods. For the local build, removal also requests administrator authorisation. Disabling access leaves the current hosts file untouched; activate Original first if you want to restore it. After updating a signed helper, disable and enable access to re-register it.
 
 ## Storage and switching
 
@@ -66,13 +66,13 @@ Administrator approval happens during helper setup. Later switches use authentic
 
 The command contains base64-encoded content, so profile text is never interpreted as shell syntax. DNS caches are refreshed after a successful switch; a cache refresh failure is reported separately. An unavailable helper reports an error and refreshes the system file without claiming success.
 
-Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block activation. Hostnames must use ASCII or punycode. This small app limits activation and imports to 96 KB to keep the helper command within system limits. Empty or comment-only profiles are valid and deliberately remove all mappings when applied.
+Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block activation. Hostnames must use ASCII or punycode. This small app limits activation and imports to 96 KB to keep the helper command within system limits. Empty or comment-only profiles are valid and deliberately remove all mappings when activated.
 
 ## Verification
 
 The executable checks cover validation, persistence, active-profile selection, corrupt library handling, backup creation, exact content replacement, external-change conflicts and symlink rejection. Helper checks cover independent request validation, rejected and accepted XPC peers, and isolated local installation and removal. Installation checks use temporary files and substitute ownership and DNS commands. They do not modify `/etc/hosts`, register a real daemon, or request administrator access.
 
-For manual verification, check profile editing, saving, switching, import/export, keyboard navigation and helper setup. The Apple-signed SMAppService path and older supported macOS versions still need testing.
+For manual verification, check profile editing, saving, switching, import/export, keyboard navigation and helper setup. Older supported macOS versions still need testing.
 
 ## Apple references
 
@@ -84,7 +84,6 @@ For manual verification, check profile editing, saving, switching, import/export
 - [Getting started with SMAppService](https://developer.apple.com/forums/thread/802443)
 - [Authenticating XPC peers](https://developer.apple.com/documentation/foundation/nsxpcconnection/setcodesigningrequirement(_:))
 - [Creating launch daemons and agents](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
-
 - [MenuBarExtra](https://developer.apple.com/documentation/swiftui/menubarextra)
 
 ## Update checks
@@ -101,4 +100,4 @@ HOSTSHIFT_VERSION="1.1.0" HOSTSHIFT_BUILD_NUMBER="2" \
 
 Use numeric release tags such as `v1.1.0`, mark production releases as GitHub's latest release, and attach the disk image. Drafts and prereleases are not offered. This checker compares the marketing version, so increment `HOSTSHIFT_VERSION` for each published update. Unconfigured builds report that updates are unavailable and make no update requests. Private repositories are not supported; no GitHub credentials are embedded in the app.
 
-The Developer ID can be supplied later through `HOSTSHIFT_SIGNING_IDENTITY`, alongside these variables. Before publishing downloads, sign and notarise the app and test helper registration after an upgrade. No release has been published by this setup. In-app installation through Sparkle remains future work, including its signed feed and coordination of unsaved edits and helper upgrades.
+Supply the Developer ID through `HOSTSHIFT_SIGNING_IDENTITY`, alongside these variables. Before publishing downloads, sign and notarise the app and test helper registration after an upgrade. In-app installation through Sparkle remains future work, including its signed feed and coordination of unsaved edits and helper upgrades.
