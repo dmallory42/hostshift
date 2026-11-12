@@ -41,6 +41,6 @@ actor HostsInstaller {
     }
 
     private static var unavailable: NSError {
-        NSError(domain: "Hostshift", code: 1, userInfo: [NSLocalizedDescriptionKey: "Hostshift could not reach its helper. Check system access in Settings. Refresh the system file before retrying; the helper may have completed the switch."])
+        NSError(domain: "Hostshift", code: 1, userInfo: [NSLocalizedDescriptionKey: "Hostshift could not reach its helper. Check system access in Settings. The helper may have completed the switch, so check which profile is active before retrying."])
     }
 }

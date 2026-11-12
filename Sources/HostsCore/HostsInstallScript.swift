@@ -19,7 +19,7 @@ public enum HostsInstallScript {
         target=/private/etc/hosts
         [ -f "$target" ] && [ ! -L "$target" ] || { echo 'The hosts file must be a regular file.' >&2; exit 1; }
         actual=$(/usr/bin/openssl dgst -sha256 < "$target")
-        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
+        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Try again.' >&2; exit 1; }
         temporary=$(/usr/bin/mktemp /private/etc/.hostshift.XXXXXX)
         backup=$(/usr/bin/mktemp /private/etc/.hostshift-backup.XXXXXX)
         trap '/bin/rm -f "$temporary" "$backup"' EXIT
@@ -28,7 +28,7 @@ public enum HostsInstallScript {
         /bin/chmod 644 "$temporary"
         /bin/cp -p "$target" "$backup"
         actual=$(/usr/bin/openssl dgst -sha256 < "$target")
-        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Refresh and try again.' >&2; exit 1; }
+        [ "${actual##* }" = '\(hash)' ] || { echo 'The hosts file changed outside Hostshift. Try again.' >&2; exit 1; }
         /bin/mv -f "$backup" /private/etc/hosts.hostshift-backup
         /bin/mv -f "$temporary" "$target"
         if /usr/bin/dscacheutil -flushcache && /usr/bin/killall -HUP mDNSResponder; then
