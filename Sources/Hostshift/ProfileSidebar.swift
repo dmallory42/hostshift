@@ -34,7 +34,7 @@ struct ProfileSidebar: View {
             Button("New Profile", systemImage: "doc.badge.plus") { store.add() }
             if let id = ids.first, ids.count == 1 {
                 Divider()
-                if let profile = store.profiles.first(where: { $0.id == id }), store.activeID != id {
+                if let profile = store.profiles.first(where: { $0.id == id }), store.activeID != id || store.isUnsaved(id: id) {
                     Button("Activate", systemImage: "checkmark.circle") {
                         Task { await store.apply(id: id) }
                     }
