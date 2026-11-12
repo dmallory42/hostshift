@@ -1,12 +1,31 @@
 import Foundation
 import HostsCore
 
+@MainActor final class Prompt {
+    var asked = 0
+    var choice = ExternalChangeChoice.cancel
+}
+
 @main @MainActor struct ProfileChecks {
-    static func main() throws {
+    static func main() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appending(path: "profiles.json")
-        let store = ProfileStore(libraryURL: url)
+        // A temporary file stands in for /etc/hosts, and the helper call just writes to it.
+        let hosts = directory.appending(path: "hosts")
+        try "127.0.0.1 localhost\n".write(to: hosts, atomically: true, encoding: .utf8)
+        func systemHosts() throws -> String { try String(contentsOf: hosts, encoding: .utf8) }
+        let prompt = Prompt()
+        let store = ProfileStore(libraryURL: url, hostsURL: hosts, systemAccess: SystemAccess(fixedStatus: .enabled),
+                                 install: { content, _ in
+                                     try content.write(to: hosts, atomically: true, encoding: .utf8)
+                                     return "Activated."
+                                 },
+                                 askAboutExternalChanges: { _ in
+                                     prompt.asked += 1
+                                     return prompt.choice
+                                 })
         let original = store.profiles[0]
         store.add(name: "First", content: "127.0.0.1 first.test\n")
         let first = store.selected!
@@ -57,7 +76,7 @@ import HostsCore
         precondition(!store.profiles.contains { $0.id == first.id })
         precondition(store.selection == second.id)
         print("PASS delete waits for confirmation and retains target after selection changes")
-        let current = try String(contentsOfFile: "/etc/hosts", encoding: .utf8)
+        let current = try systemHosts()
         store.add(name: "Active check", content: current)
         let active = store.selected!
         precondition(store.saveSelected())
@@ -88,7 +107,6 @@ import HostsCore
         precondition(store.isUnsaved(id: unsaved.id))
         let beforeNewSave = try ProfileLibrary.load(from: url)
         precondition(!beforeNewSave.profiles.contains { $0.id == unsaved.id })
-        precondition(!store.canApply(unsaved))
         store.selection = second.id
         precondition(store.saveSelected())
         let afterSave = try ProfileLibrary.load(from: url)
@@ -117,11 +135,64 @@ import HostsCore
         let copies = try ProfileLibrary.load(from: url).profiles.map(\.name).filter { $0.hasPrefix("Copy of /etc/hosts") }
         precondition(copies == ["Copy of /etc/hosts", "Copy of /etc/hosts (2)", "Copy of /etc/hosts (3)"])
         print("PASS repeated copies of /etc/hosts get numbered names")
+        store.add(name: "Staging", content: "127.0.0.1 staging.test\n")
+        let staging = store.selected!
+        precondition(store.isUnsaved(id: staging.id) && store.canApply(staging))
+        await store.apply(id: staging.id)
+        precondition(store.errorMessage == nil, store.errorMessage ?? "")
+        let afterActivation = try systemHosts()
+        let libraryAfterActivation = try ProfileLibrary.load(from: url)
+        precondition(afterActivation == staging.content && store.activeID == staging.id)
+        precondition(libraryAfterActivation.profiles.contains(staging) && libraryAfterActivation.preferredActiveID == staging.id)
+        precondition(!store.isUnsaved(id: staging.id) && store.isUnsaved(id: second.id) && prompt.asked == 0)
+        print("PASS Activate saves and installs that profile only, leaving other drafts unsaved")
+        precondition(!store.canApply(staging))
+        var stagingEdit = staging
+        stagingEdit.content += "127.0.0.2 api.staging.test\n"
+        store.stage(stagingEdit)
+        precondition(store.canApply(stagingEdit))
+        precondition(store.saveSelected())
+        precondition(store.activeID == nil && store.canApply(stagingEdit))
+        await store.apply(id: staging.id)
+        let afterEdit = try systemHosts()
+        precondition(afterEdit == stagingEdit.content && store.activeID == staging.id && prompt.asked == 0)
+        print("PASS unsaved or saved edits to the active profile stay activatable without the external-change prompt")
+        try "127.0.0.1 docker.internal\n".write(to: hosts, atomically: true, encoding: .utf8)
+        await store.apply(id: original.id)
+        let afterCancel = try systemHosts()
+        precondition(prompt.asked == 1 && afterCancel == "127.0.0.1 docker.internal\n")
+        prompt.choice = .saveAsProfile
+        await store.apply(id: original.id)
+        let afterKeep = try systemHosts()
+        let libraryAfterKeep = try ProfileLibrary.load(from: url)
+        precondition(prompt.asked == 2 && afterKeep == original.content)
+        precondition(libraryAfterKeep.profiles.contains { $0.content == "127.0.0.1 docker.internal\n" })
+        try "127.0.0.1 other.internal\n".write(to: hosts, atomically: true, encoding: .utf8)
+        prompt.choice = .replace
+        await store.apply(id: staging.id)
+        let afterReplace = try systemHosts()
+        precondition(prompt.asked == 3 && afterReplace == stagingEdit.content)
+        precondition(!store.profiles.contains { $0.content == "127.0.0.1 other.internal\n" })
+        print("PASS external changes prompt before a switch: Cancel keeps them, Save as Profile stores them, Replace discards them")
+        store.add(name: "Broken", content: "not-an-ip broken.test\n")
+        let broken = store.selected!
+        precondition(!store.canApply(broken))
+        await store.apply(id: broken.id)
+        let afterInvalid = try systemHosts()
+        precondition(store.errorMessage?.contains("Line 1") == true && afterInvalid == stagingEdit.content && store.isUnsaved(id: broken.id))
+        store.errorMessage = nil
+        store.delete(id: broken.id)
+        print("PASS an invalid profile is neither saved nor installed")
         try FileManager.default.removeItem(at: url)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+        store.selection = second.id
         precondition(!store.saveSelected())
         precondition(store.isUnsaved(id: second.id) && store.selected?.name == "Unsaved Rename")
         precondition(store.library?.profiles.first { $0.id == second.id }?.name == second.name)
         print("PASS failed save preserves draft and previously saved state")
+        await store.apply(id: second.id)
+        let afterFailedSave = try systemHosts()
+        precondition(afterFailedSave == stagingEdit.content && store.isUnsaved(id: second.id))
+        print("PASS a failed save stops the install")
     }
 }

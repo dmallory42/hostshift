@@ -3,7 +3,9 @@ import HostsCore
 
 @MainActor @Observable
 final class ProfileStore {
-    let systemAccess = SystemAccess()
+    typealias Install = @Sendable (_ content: String, _ expected: String) async throws -> String
+
+    let systemAccess: SystemAccess
     var library: ProfileLibrary?
     var selection: UUID?
     var showSystemAccessSetup: Bool { !systemAccess.isReady }
@@ -17,8 +19,10 @@ final class ProfileStore {
     var hasUnsavedChanges: Bool { !drafts.isEmpty }
     var isBusy: Bool { isApplying || systemAccess.isUpdating }
     @ObservationIgnored private var monitorTask: Task<Void, Never>?
-    private let installer = HostsInstaller()
+    private let install: Install
+    private let askAboutExternalChanges: @MainActor (Profile) -> ExternalChangeChoice
     private let libraryURL: URL
+    private let hostsURL: URL
 
     var profiles: [Profile] {
         let saved = library?.profiles ?? []
@@ -32,10 +36,19 @@ final class ProfileStore {
     var activeProfile: Profile? { library?.profiles.first { $0.id == activeID } }
     var activeID: UUID? { systemContent.flatMap { library?.activeID(matching: $0) } }
 
-    init(libraryURL: URL = URL.applicationSupportDirectory.appending(path: "Hostshift/profiles.json")) {
+    /// The defaults are the real system. Checks substitute the hosts file, system access, helper call and prompt.
+    init(libraryURL: URL = URL.applicationSupportDirectory.appending(path: "Hostshift/profiles.json"),
+         hostsURL: URL = URL(fileURLWithPath: "/etc/hosts"),
+         systemAccess: SystemAccess = SystemAccess(),
+         install: @escaping Install = { try await HostsInstaller().apply(content: $0, expected: $1) },
+         askAboutExternalChanges: @escaping @MainActor (Profile) -> ExternalChangeChoice = ProfileStore.presentExternalChangesAlert) {
         self.libraryURL = libraryURL
+        self.hostsURL = hostsURL
+        self.systemAccess = systemAccess
+        self.install = install
+        self.askAboutExternalChanges = askAboutExternalChanges
         do {
-            let current = try String(contentsOfFile: "/etc/hosts", encoding: .utf8)
+            let current = try String(contentsOf: hostsURL, encoding: .utf8)
             systemContent = current
             if FileManager.default.fileExists(atPath: libraryURL.path) {
                 library = try ProfileLibrary.load(from: libraryURL)
@@ -64,7 +77,7 @@ final class ProfileStore {
 
     func refresh() {
         systemAccess.refresh()
-        do { systemContent = try String(contentsOfFile: "/etc/hosts", encoding: .utf8) }
+        do { systemContent = try String(contentsOf: hostsURL, encoding: .utf8) }
         catch { systemContent = nil; errorMessage = error.localizedDescription }
     }
 
@@ -205,7 +218,7 @@ final class ProfileStore {
         let issues = HostsValidator.issues(in: selected.content)
         guard issues.isEmpty else { errorMessage = issues.joined(separator: "\n"); return }
         if library?.hasExternalChanges(in: expected) == true {
-            switch Self.askAboutExternalChanges(selected) {
+            switch askAboutExternalChanges(selected) {
             case .cancel: return
             case .replace: break
             case .saveAsProfile: guard saveExternalChanges(expected) else { return }
@@ -215,7 +228,7 @@ final class ProfileStore {
         isApplying = true
         defer { isApplying = false }
         do {
-            let message = try await installer.apply(content: selected.content, expected: expected)
+            let message = try await install(selected.content, expected)
             refresh()
             guard systemContent == selected.content else {
                 errorMessage = "The hosts file no longer matches the profile. Another app may have changed it."
@@ -251,7 +264,7 @@ final class ProfileStore {
         return candidate
     }
 
-    private static func askAboutExternalChanges(_ profile: Profile) -> ExternalChangeChoice {
+    static func presentExternalChangesAlert(_ profile: Profile) -> ExternalChangeChoice {
         let alert = NSAlert()
         alert.messageText = "/etc/hosts has changed outside Hostshift"
         alert.informativeText = "Another app or a manual edit changed your hosts file. Activating “\(profile.displayName)” will replace those changes."

@@ -8,6 +8,7 @@ final class SystemAccess {
     private let localSetup = LocalSetup()
     private var localRegistration: LocalRegistration?
     private var helperURL: URL?
+    private let fixedStatus: SMAppService.Status?
     var status: SMAppService.Status = .notRegistered
     var isLocalBuild = false
     var errorMessage: String?
@@ -23,8 +24,10 @@ final class SystemAccess {
         url.standardizedFileURL.path.hasPrefix("/Applications/")
     }
 
-    init() {
-        isLocalBuild = (try? HelperIdentity.peerRequirement(identifier: HelperIdentity.serviceName)) == nil
+    /// Checks pass a fixed status so they never query launchd or the installed helper.
+    init(fixedStatus: SMAppService.Status? = nil) {
+        self.fixedStatus = fixedStatus
+        isLocalBuild = fixedStatus == nil && (try? HelperIdentity.peerRequirement(identifier: HelperIdentity.serviceName)) == nil
         if isLocalBuild {
             do {
                 let helper = Bundle.main.bundleURL.appending(path: "Contents/MacOS/HostshiftHelper")
@@ -40,6 +43,7 @@ final class SystemAccess {
     }
 
     func refresh() {
+        if let fixedStatus { status = fixedStatus; return }
         if isLocalBuild {
             if let localRegistration {
                 requiresRestart = (try? CodeIdentity.requirement(at: Bundle.main.bundleURL)) != localRegistration.clientRequirement

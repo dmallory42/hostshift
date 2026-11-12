@@ -70,7 +70,7 @@ Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block ac
 
 ## Verification
 
-The executable checks cover validation, persistence, active-profile selection, corrupt library handling, backup creation, exact content replacement, external-change conflicts and symlink rejection. Helper checks cover independent request validation, rejected and accepted XPC peers, and isolated local installation and removal. Installation checks use temporary files and substitute ownership and DNS commands. They do not modify `/etc/hosts`, register a real daemon, or request administrator access.
+The executable checks cover validation, persistence, active-profile selection, corrupt library handling, backup creation, exact content replacement, external-change conflicts and symlink rejection. Helper checks cover independent request validation, rejected and accepted XPC peers, the idle exit, and isolated local installation and removal. Profile checks run activation against a temporary hosts file with the helper call and external-change prompt substituted. Installation checks use temporary files and substitute ownership and DNS commands. They do not modify `/etc/hosts`, register a real daemon, or request administrator access.
 
 For manual verification, check profile editing, saving, switching, import/export, keyboard navigation and helper setup. Older supported macOS versions still need testing.
 
