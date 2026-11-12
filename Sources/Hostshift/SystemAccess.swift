@@ -9,6 +9,7 @@ final class SystemAccess {
     private var localRegistration: LocalRegistration?
     private var helperURL: URL?
     private let fixedStatus: SMAppService.Status?
+    @ObservationIgnored private var refreshCount = 0
     var status: SMAppService.Status = .notRegistered
     var isLocalBuild = false
     var errorMessage: String?
@@ -43,21 +44,41 @@ final class SystemAccess {
     }
 
     func refresh() {
-        if let fixedStatus { status = fixedStatus; return }
-        if isLocalBuild {
-            if let localRegistration {
-                requiresRestart = (try? CodeIdentity.requirement(at: Bundle.main.bundleURL)) != localRegistration.clientRequirement
-                if requiresRestart {
-                    status = .notRegistered
-                    return
-                }
-            }
-            guard let localRegistration, let installed = try? LocalRegistration.load(), installed == localRegistration else {
-                status = .notRegistered
-                return
-            }
-            status = Self.localServiceIsLoaded() ? .enabled : .notRegistered
-        } else { status = service.status }
+        refreshCount += 1
+        if let fixedStatus {
+            update(requiresRestart: false, status: fixedStatus)
+        } else if isLocalBuild {
+            let state = Self.localState(for: localRegistration, bundle: Bundle.main.bundleURL)
+            update(requiresRestart: state.requiresRestart, status: state.status)
+        } else {
+            update(requiresRestart: false, status: service.status)
+        }
+    }
+
+    /// The same refresh for the periodic monitor. A local build verifies its signature and asks launchctl, which is too slow to repeat on the main thread.
+    func refreshInBackground() async {
+        guard isLocalBuild else { refresh(); return }
+        let count = refreshCount
+        let registration = localRegistration
+        let bundle = Bundle.main.bundleURL
+        let state = await Task.detached { Self.localState(for: registration, bundle: bundle) }.value
+        // A direct refresh or a setup run that happened meanwhile is newer than this result.
+        guard count == refreshCount, !isUpdating else { return }
+        update(requiresRestart: state.requiresRestart, status: state.status)
+    }
+
+    private func update(requiresRestart: Bool, status: SMAppService.Status) {
+        if self.requiresRestart != requiresRestart { self.requiresRestart = requiresRestart }
+        if self.status != status { self.status = status }
+    }
+
+    private nonisolated static func localState(for registration: LocalRegistration?, bundle: URL) -> (requiresRestart: Bool, status: SMAppService.Status) {
+        guard let registration else { return (false, .notRegistered) }
+        if (try? CodeIdentity.requirement(at: bundle)) != registration.clientRequirement { return (true, .notRegistered) }
+        guard let installed = try? LocalRegistration.load(), installed == registration, localServiceIsLoaded() else {
+            return (false, .notRegistered)
+        }
+        return (false, .enabled)
     }
 
     func enable() async {
@@ -76,15 +97,12 @@ final class SystemAccess {
                 try await localSetup.run(script)
             } catch { errorMessage = error.localizedDescription }
         } else {
-            refresh()
             if needsApproval { SMAppService.openSystemSettingsLoginItems(); return }
-            do { try service.register() }
-            catch {
-                refresh()
-                if !needsApproval { errorMessage = error.localizedDescription }
-            }
+            var failure: (any Error)?
+            do { try service.register() } catch { failure = error }
             refresh()
             if needsApproval { SMAppService.openSystemSettingsLoginItems() }
+            else if let failure { errorMessage = failure.localizedDescription }
         }
     }
 
@@ -98,7 +116,7 @@ final class SystemAccess {
         } catch { errorMessage = error.localizedDescription }
     }
 
-    private static func localServiceIsLoaded() -> Bool {
+    private nonisolated static func localServiceIsLoaded() -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         process.arguments = ["print", "system/" + HelperIdentity.serviceName]

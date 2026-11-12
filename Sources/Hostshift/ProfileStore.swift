@@ -53,7 +53,7 @@ final class ProfileStore {
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(3)) } catch { return }
                 guard let self else { return }
-                if !self.isBusy { self.refresh() }
+                if !self.isBusy { await self.refreshFromMonitor() }
             }
         }
     }
@@ -68,6 +68,11 @@ final class ProfileStore {
     func refresh(reportingRepeatedFailure: Bool = false) {
         systemAccess.refresh()
         readSystemHosts(reportingRepeatedFailure: reportingRepeatedFailure)
+    }
+
+    private func refreshFromMonitor() async {
+        await systemAccess.refreshInBackground()
+        if !isBusy { readSystemHosts() }
     }
 
     /// The monitor polls every few seconds, so a read failure is reported when the file stops being readable, not on every poll.
