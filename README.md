@@ -58,3 +58,5 @@ For tests, signing and release setup, see [Developing Hostshift](docs/developmen
 ## Licence
 
 Hostshift is free software under the GNU General Public License, version 2 or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+Hostshift includes Apple's [Swift Argument Parser](Vendor/swift-argument-parser), which uses the Apache License 2.0 with the Runtime Library Exception. That licence is compatible with version 3 of the GPL but not version 2, so builds that include it are distributed under GPL version 3.

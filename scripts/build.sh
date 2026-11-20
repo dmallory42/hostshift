@@ -10,12 +10,22 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Library/
 ARCH=arm64
 TARGET="$ARCH-apple-macosx14.0"
 # Direct swiftc also works with Command Line Tools installations without Xcode.
-swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
-    -emit-module -emit-object -whole-module-optimization -module-name HostsCore \
-    Sources/HostsCore/*.swift -o "$MODULES/HostsCore.o" \
-    -emit-module-path "$MODULES/HostsCore.swiftmodule"
+# Compiles a library module from the sources after the name, with optional extra flags in MODULE_FLAGS.
+compile_module() {
+    local name="$1"
+    shift
+    swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library ${MODULE_FLAGS:-} \
+        -emit-module -emit-object -whole-module-optimization -module-name "$name" -I "$MODULES" \
+        "$@" -o "$MODULES/$name.o" -emit-module-path "$MODULES/$name.swiftmodule"
+}
+# The command-line tool's argument parsing. Vendored warnings are not ours to fix.
+PARSER=Vendor/swift-argument-parser/Sources
+MODULE_FLAGS=-suppress-warnings compile_module ArgumentParserToolInfo "$PARSER"/ArgumentParserToolInfo/*.swift
+MODULE_FLAGS=-suppress-warnings compile_module ArgumentParser "$PARSER"/ArgumentParser/*/*.swift
+compile_module HostsCore Sources/HostsCore/*.swift
 swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
     -I "$MODULES" Sources/Hostshift/*.swift "$MODULES/HostsCore.o" \
+    "$MODULES/ArgumentParser.o" "$MODULES/ArgumentParserToolInfo.o" \
     -o "$APP/Contents/MacOS/Hostshift"
 swiftc -swift-version 6 -target "$TARGET" -O -parse-as-library \
     -I "$MODULES" Sources/HostshiftHelper/*.swift "$MODULES/HostsCore.o" \

@@ -4,7 +4,7 @@ Build, helper and release details for contributors. For everyday use, see the [R
 
 ## Build and check
 
-Requires macOS 14 or later and a Swift 6 compiler with a matching macOS SDK. No third-party dependencies are required.
+Requires macOS 14 or later and a Swift 6 compiler with a matching macOS SDK. The command-line tool parses arguments with Apple's Swift Argument Parser, which is vendored unmodified in `Vendor/swift-argument-parser`, so builds need no package resolution or network access. Its README says how to update it.
 
 ```sh
 ./scripts/build.sh
