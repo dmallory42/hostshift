@@ -24,8 +24,7 @@ run_checks helper-checks \
     Sources/HostshiftHelper/IdleExit.swift
 run_checks profile-checks \
     Sources/Hostshift/ProfileStore.swift Sources/Hostshift/SystemAccess.swift \
-    Sources/Hostshift/LocalSetup.swift Sources/Hostshift/HostsInstaller.swift \
-    Sources/Hostshift/HelperReply.swift
+    Sources/Hostshift/LocalSetup.swift
 run_checks editor-checks \
     Sources/Hostshift/HostsTextFormatting.swift Sources/Hostshift/HostsSyntaxHighlighter.swift \
     Sources/Hostshift/HostsTextCoordinator.swift

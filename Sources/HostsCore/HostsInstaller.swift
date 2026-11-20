@@ -1,8 +1,10 @@
 import Foundation
-import HostsCore
 
-actor HostsInstaller {
-    func apply(content: String, expected: String) async throws -> String {
+/// Asks the privileged helper to replace the hosts file. Only callers with the app's signature are accepted.
+public actor HostsInstaller {
+    public init() {}
+
+    public func apply(content: String, expected: String) async throws -> String {
         let requirement: String
         if let signedRequirement = try? HelperIdentity.peerRequirement(identifier: HelperIdentity.serviceName) {
             requirement = signedRequirement
