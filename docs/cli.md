@@ -14,8 +14,11 @@
 With Homebrew:
 
 ```sh
+brew trust --cask dmallory42/tap/hostshift
 brew install --cask dmallory42/tap/hostshift
 ```
+
+Recent versions of Homebrew only load casks from other taps after you trust them. Skip the first line if your Homebrew has no `trust` command.
 
 If you installed Hostshift from the disk image, link the command into a folder on your PATH. **Settings → Command Line** in the app shows these commands with the app's actual location:
 

@@ -53,7 +53,7 @@ hostshift activate Staging
 hostshift new "Local dev" --from ~/dev.hosts
 ```
 
-Install it with `brew install --cask dmallory42/tap/hostshift`. If you installed from the disk image, **Settings → Command Line** shows the commands to link it. You can also add `hs` as a shorter name; [the reference](docs/cli.md#install) explains how, and how to remove it if another tool uses that name.
+Install it with Homebrew by running `brew trust --cask dmallory42/tap/hostshift`, then `brew install --cask dmallory42/tap/hostshift`. If you installed from the disk image, **Settings → Command Line** shows the commands to link it. You can also add `hs` as a shorter name; [the reference](docs/cli.md#install) explains how, and how to remove it if another tool uses that name.
 
 AI agents and scripts can run `hostshift --help` to learn the tool. Every command accepts `--json`, never prompts without a terminal, and uses fixed exit codes. See the [command-line reference](docs/cli.md) for details.
 
