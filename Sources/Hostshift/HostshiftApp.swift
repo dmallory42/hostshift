@@ -1,6 +1,6 @@
 import SwiftUI
 
-@main
+/// Started by HostshiftMain unless the executable was invoked as the command-line tool.
 struct HostshiftApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("showMenuBarExtra") private var showMenuBarExtra = true

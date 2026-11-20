@@ -285,9 +285,3 @@ final class ProfileStore {
         }
     }
 }
-
-extension Profile {
-    var displayName: String { name.isEmpty ? "Untitled" : name }
-    /// The save panel and Finder treat slashes and colons as path separators.
-    var exportFileName: String { displayName.replacing("/", with: "-").replacing(":", with: "-") + ".hosts" }
-}

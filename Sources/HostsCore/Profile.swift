@@ -13,3 +13,9 @@ public struct Profile: Codable, Identifiable, Equatable, Sendable {
         self.isOriginal = isOriginal
     }
 }
+
+extension Profile {
+    public var displayName: String { name.isEmpty ? "Untitled" : name }
+    /// The save panel and Finder treat slashes and colons as path separators.
+    public var exportFileName: String { displayName.replacing("/", with: "-").replacing(":", with: "-") + ".hosts" }
+}

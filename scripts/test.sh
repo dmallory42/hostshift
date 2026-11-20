@@ -5,9 +5,18 @@ source scripts/sdk.sh
 MODULES="$PWD/build/checks"
 TARGET=arm64-apple-macosx14.0
 mkdir -p "$MODULES"
-swiftc -swift-version 6 -target "$TARGET" -parse-as-library -emit-module -emit-object \
-    -whole-module-optimization -module-name HostsCore Sources/HostsCore/*.swift \
-    -o "$MODULES/HostsCore.o" -emit-module-path "$MODULES/HostsCore.swiftmodule"
+# Compiles a library module from the sources after the name, with optional extra flags in MODULE_FLAGS.
+compile_module() {
+    local name="$1"
+    shift
+    swiftc -swift-version 6 -target "$TARGET" -parse-as-library ${MODULE_FLAGS:-} -emit-module -emit-object \
+        -whole-module-optimization -module-name "$name" -I "$MODULES" "$@" \
+        -o "$MODULES/$name.o" -emit-module-path "$MODULES/$name.swiftmodule"
+}
+compile_module HostsCore Sources/HostsCore/*.swift
+PARSER=Vendor/swift-argument-parser/Sources
+MODULE_FLAGS=-suppress-warnings compile_module ArgumentParserToolInfo "$PARSER"/ArgumentParserToolInfo/*.swift
+MODULE_FLAGS=-suppress-warnings compile_module ArgumentParser "$PARSER"/ArgumentParser/*/*.swift
 
 # Builds and runs scripts/<name>.swift, linked with HostsCore and the sources listed after the name.
 run_checks() {
@@ -29,3 +38,6 @@ run_checks editor-checks \
     Sources/Hostshift/HostsTextFormatting.swift Sources/Hostshift/HostsSyntaxHighlighter.swift \
     Sources/Hostshift/HostsTextCoordinator.swift
 run_checks update-checks
+run_checks cli-checks \
+    Sources/Hostshift/CLIContext.swift Sources/Hostshift/CLICommands.swift Sources/Hostshift/CLIRunner.swift \
+    "$MODULES/ArgumentParser.o" "$MODULES/ArgumentParserToolInfo.o"
