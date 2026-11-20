@@ -183,6 +183,48 @@ import HostsCore
         store.errorMessage = nil
         store.delete(id: broken.id)
         print("PASS an invalid profile is neither saved nor installed")
+        // Another process, such as the command-line tool, changing the same library.
+        let shared = ProfileLibraryFile(url: url)
+        let draftBeforeExternal = store.selected!
+        precondition(store.isUnsaved(id: draftBeforeExternal.id))
+        var fromCLI: Profile?
+        try shared.update { fromCLI = $0.add(name: "From CLI", content: "127.0.0.1 cli.test\n") }
+        store.add(name: "App draft", content: "127.0.0.1 app.test\n")
+        let appDraft = store.selected!
+        precondition(store.saveSelected())
+        let afterBothSaves = try ProfileLibrary.load(from: url)
+        precondition(afterBothSaves.profiles.contains(fromCLI!) && afterBothSaves.profiles.contains(appDraft))
+        print("PASS saving in the app keeps profiles another process saved meanwhile")
+        precondition(store.profiles.contains(fromCLI!) && store.isUnsaved(id: draftBeforeExternal.id))
+        var renamedByCLI = fromCLI!
+        renamedByCLI.name = "Renamed by CLI"
+        try shared.update { try $0.upsert(renamedByCLI) }
+        store.refresh()
+        precondition(store.profiles.contains(renamedByCLI) && store.isUnsaved(id: draftBeforeExternal.id))
+        print("PASS the app reloads profiles another process saved and keeps its drafts")
+        try shared.update { try $0.upsert(draftBeforeExternal) }
+        store.refresh()
+        precondition(!store.isUnsaved(id: draftBeforeExternal.id))
+        print("PASS a draft another process saved identically is no longer unsaved")
+        store.selection = renamedByCLI.id
+        try shared.update { try $0.remove(id: renamedByCLI.id, systemContent: try systemHosts()) }
+        store.refresh()
+        precondition(!store.profiles.contains { $0.id == renamedByCLI.id } && store.selection != nil && store.selection != renamedByCLI.id)
+        print("PASS deleting the selected profile elsewhere moves the selection")
+        let asked = prompt.asked
+        let external = ProfileActivation(library: shared, hostsURL: hosts, install: { content, _ in
+            try content.write(to: hosts, atomically: true, encoding: .utf8)
+            return "Activated."
+        })
+        let cliWarning = try await external.run(appDraft, resolveExternalChanges: { _ in .cancel })
+        let afterCLI = try systemHosts()
+        precondition(cliWarning == nil && afterCLI == appDraft.content)
+        store.refresh()
+        precondition(store.activeID == appDraft.id)
+        await store.apply(id: staging.id)
+        let afterAppSwitch = try systemHosts()
+        precondition(prompt.asked == asked && afterAppSwitch == stagingEdit.content && store.errorMessage == nil)
+        print("PASS a switch made by another process is not reported as an external change")
         try FileManager.default.removeItem(at: url)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
         store.selection = second.id

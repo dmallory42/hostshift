@@ -3,7 +3,7 @@ import HostsCore
 
 @MainActor @Observable
 final class ProfileStore {
-    typealias Install = @Sendable (_ content: String, _ expected: String) async throws -> String
+    typealias Install = ProfileActivation.Install
 
     let systemAccess: SystemAccess
     var library: ProfileLibrary?
@@ -21,8 +21,10 @@ final class ProfileStore {
     @ObservationIgnored private var monitorTask: Task<Void, Never>?
     private let install: Install
     private let askAboutExternalChanges: @MainActor (Profile) -> ExternalChangeChoice
-    private let libraryURL: URL
+    private let libraryFile: ProfileLibraryFile
     private let hostsURL: URL
+    /// The version of profiles.json last read or written here. A different stamp means the command-line tool changed it.
+    @ObservationIgnored private var libraryStamp: ProfileLibraryFile.Stamp?
 
     var profiles: [Profile] {
         let saved = library?.profiles ?? []
@@ -37,12 +39,12 @@ final class ProfileStore {
     var activeID: UUID? { systemContent.flatMap { library?.activeID(matching: $0) } }
 
     /// The defaults are the real system. Checks substitute the hosts file, system access, helper call and prompt.
-    init(libraryURL: URL = URL.applicationSupportDirectory.appending(path: "Hostshift/profiles.json"),
+    init(libraryURL: URL = ProfileLibraryFile.standard.url,
          hostsURL: URL = URL(fileURLWithPath: "/etc/hosts"),
          systemAccess: SystemAccess = SystemAccess(),
          install: @escaping Install = { try await HostsInstaller().apply(content: $0, expected: $1) },
          askAboutExternalChanges: @escaping @MainActor (Profile) -> ExternalChangeChoice = ProfileStore.presentExternalChangesAlert) {
-        self.libraryURL = libraryURL
+        libraryFile = ProfileLibraryFile(url: libraryURL)
         self.hostsURL = hostsURL
         self.systemAccess = systemAccess
         self.install = install
@@ -68,11 +70,28 @@ final class ProfileStore {
     func refresh(reportingRepeatedFailure: Bool = false) {
         systemAccess.refresh()
         readSystemHosts(reportingRepeatedFailure: reportingRepeatedFailure)
+        reloadLibraryIfChanged()
     }
 
     private func refreshFromMonitor() async {
         await systemAccess.refreshInBackground()
-        if !isBusy { readSystemHosts() }
+        if !isBusy {
+            readSystemHosts()
+            reloadLibraryIfChanged()
+        }
+    }
+
+    /// Picks up changes another process saved, such as the command-line tool. Drafts are kept,
+    /// except those that now match what is saved. A read failure keeps the library already loaded.
+    private func reloadLibraryIfChanged() {
+        guard library != nil, libraryFile.stamp() != libraryStamp,
+              let snapshot = try? libraryFile.load() else { return }
+        libraryStamp = snapshot.stamp
+        if library != snapshot.library { library = snapshot.library }
+        drafts.removeAll { snapshot.library.profiles.contains($0) }
+        if let selection, !profiles.contains(where: { $0.id == selection }) {
+            self.selection = activeID ?? profiles.first?.id
+        }
     }
 
     /// The monitor polls every few seconds, so a read failure is reported when the file stops being readable, not on every poll.
@@ -81,7 +100,7 @@ final class ProfileStore {
         do {
             let current = try String(contentsOf: hostsURL, encoding: .utf8)
             if systemContent != current { systemContent = current }
-            if wasUnavailable && library == nil && !FileManager.default.fileExists(atPath: libraryURL.path) { loadLibrary() }
+            if wasUnavailable && library == nil && !libraryFile.exists { loadLibrary() }
         } catch {
             guard !wasUnavailable || reportingRepeatedFailure else { return }
             systemContent = nil
@@ -93,22 +112,20 @@ final class ProfileStore {
     private func loadLibrary() {
         guard library == nil else { return }
         do {
-            if FileManager.default.fileExists(atPath: libraryURL.path) {
-                library = try ProfileLibrary.load(from: libraryURL)
-            } else if let systemContent {
-                let initial = ProfileLibrary(original: systemContent)
-                try initial.save(to: libraryURL)
-                library = initial
-            } else { return }
+            guard let snapshot = try libraryFile.loadOrCreate(original: systemContent) else { return }
+            library = snapshot.library
+            libraryStamp = snapshot.stamp
             selection = activeID ?? profiles.first?.id
         } catch { errorMessage = "Could not open your profiles: \(error.localizedDescription)" }
     }
 
+    /// Applies one change to the latest saved library, so changes saved by the command-line tool are kept.
     @discardableResult
-    private func commit(_ updated: ProfileLibrary) -> Bool {
+    private func commit(_ change: (inout ProfileLibrary) throws -> Void) -> Bool {
         do {
-            try updated.save(to: libraryURL)
-            library = updated
+            let snapshot = try libraryFile.update(change)
+            library = snapshot.library
+            libraryStamp = snapshot.stamp
             return true
         } catch {
             errorMessage = "Could not save your profiles: \(error.localizedDescription)"
@@ -135,29 +152,25 @@ final class ProfileStore {
 
     @discardableResult
     func save(id: UUID) -> Bool {
-        guard let draft = drafts.first(where: { $0.id == id }), var updated = library else { return true }
-        if let index = updated.profiles.firstIndex(where: { $0.id == id }) {
-            updated.profiles[index] = draft
-        } else {
-            updated.profiles.append(draft)
-        }
-        guard commit(updated) else { return false }
+        guard let draft = drafts.first(where: { $0.id == id }), library != nil else { return true }
+        guard commit({ try $0.upsert(draft) }) else { return false }
         drafts.removeAll { $0.id == id }
         return true
     }
 
     @discardableResult
     func saveAll() -> Bool {
-        guard var updated = library else { return false }
-        updated.profiles = profiles
-        guard commit(updated) else { return false }
+        let pending = drafts
+        guard library != nil, commit({ library in
+            for draft in pending { try library.upsert(draft) }
+        }) else { return false }
         drafts.removeAll()
         return true
     }
 
     func add(name: String = "New Profile", content: String? = nil) {
         guard library != nil else { return }
-        let profile = Profile(name: uniqueName(name), content: content ?? profiles.first(where: \.isOriginal)?.content ?? "")
+        let profile = Profile(name: ProfileLibrary.uniqueName(name, among: Set(profiles.map(\.name))), content: content ?? profiles.first(where: \.isOriginal)?.content ?? "")
         drafts.append(profile)
         selection = profile.id
     }
@@ -173,8 +186,7 @@ final class ProfileStore {
     }
 
     func rename(id: UUID, name: String) {
-        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, var profile = profiles.first(where: { $0.id == id }), !profile.isOriginal else { return }
+        guard let name = ProfileLibrary.normalizedName(name), var profile = profiles.first(where: { $0.id == id }), !profile.isOriginal else { return }
         profile.name = name
         stage(profile)
     }
@@ -193,16 +205,15 @@ final class ProfileStore {
 
     func delete(id: UUID) {
         refresh()
-        guard canDelete(id: id), var updated = library else { return }
-        updated.profiles.removeAll { $0.id == id }
-        guard commit(updated) else { return }
+        guard canDelete(id: id), let systemContent else { return }
+        guard commit({ try $0.remove(id: id, systemContent: systemContent) }) else { return }
         drafts.removeAll { $0.id == id }
         if selection == id { selection = profiles.first?.id }
     }
 
     func captureCurrentHosts() {
         refresh()
-        if let content = systemContent { add(name: "Copy of /etc/hosts", content: content) }
+        if let content = systemContent { add(name: ProfileLibrary.copyOfHostsName, content: content) }
     }
 
     func importProfile() {
@@ -235,56 +246,28 @@ final class ProfileStore {
     func apply(id: UUID) async {
         guard !isApplying else { return }
         refresh()
-        guard systemAccess.isReady,
-              let selected = profiles.first(where: { $0.id == id }), let expected = systemContent else { return }
+        guard systemAccess.isReady, let selected = profiles.first(where: { $0.id == id }), systemContent != nil else { return }
         errorMessage = nil
-        let issues = HostsValidator.issues(in: selected.content)
-        guard issues.isEmpty else { errorMessage = issues.joined(separator: "\n"); return }
-        if library?.hasExternalChanges(in: expected) == true {
-            switch askAboutExternalChanges(selected) {
-            case .cancel: return
-            case .replace: break
-            case .saveAsProfile: guard saveExternalChanges(expected) else { return }
-            }
-        }
-        guard save(id: id) else { return }
         isApplying = true
         defer { isApplying = false }
+        let activation = ProfileActivation(library: libraryFile, hostsURL: hostsURL, install: install)
+        let ask = askAboutExternalChanges
         do {
-            let message = try await install(selected.content, expected)
-            refresh()
-            guard systemContent == selected.content else {
-                errorMessage = "The hosts file no longer matches the profile. Another app may have changed it."
-                return
+            if let warning = try await activation.run(selected, reservedNames: Set(drafts.map(\.name)),
+                                                      resolveExternalChanges: { await ask($0) }) {
+                errorMessage = warning
             }
-            if var updated = library {
-                updated.preferredActiveID = selected.id
-                updated.lastActivatedDigest = HostsInstallScript.digest(selected.content)
-                commit(updated)
-            }
-            if message == HostsInstallScript.dnsRefreshFailed { errorMessage = message }
-        } catch {
-            refresh()
-            errorMessage = error.localizedDescription
-        }
+        } catch .cancelled {
+        } catch { errorMessage = error.localizedDescription }
+        // The activation saved the profile, so its draft is dropped when the library reloads.
+        refresh()
     }
 
     @discardableResult
     func saveExternalChanges(_ content: String) -> Bool {
-        guard var updated = library else { return false }
-        updated.profiles.append(Profile(name: uniqueName("Copy of /etc/hosts"), content: content))
-        return commit(updated)
-    }
-
-    private func uniqueName(_ name: String) -> String {
-        let names = Set(profiles.map(\.name))
-        var candidate = name
-        var number = 2
-        while names.contains(candidate) {
-            candidate = "\(name) (\(number))"
-            number += 1
-        }
-        return candidate
+        guard library != nil else { return false }
+        let reserved = Set(drafts.map(\.name))
+        return commit { _ = $0.add(name: ProfileLibrary.copyOfHostsName, content: content, reservedNames: reserved) }
     }
 
     static func presentExternalChangesAlert(_ profile: Profile) -> ExternalChangeChoice {
@@ -301,10 +284,6 @@ final class ProfileStore {
         default: return .cancel
         }
     }
-}
-
-enum ExternalChangeChoice {
-    case saveAsProfile, replace, cancel
 }
 
 extension Profile {

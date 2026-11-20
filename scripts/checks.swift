@@ -56,6 +56,42 @@ struct Checks {
         do { _ = try ProfileLibrary.load(from: url); fatalError("Corrupt library accepted") }
         catch { check(true, "Corrupt library reported without overwriting") }
 
+        check(ProfileLibrary.uniqueName("Work", among: ["Work", "Work (2)"]) == "Work (3)" && ProfileLibrary.uniqueName("New", among: []) == "New", "Generated names skip names in use")
+        check(ProfileLibrary.normalizedName("  Dev \n") == "Dev" && ProfileLibrary.normalizedName(" \t") == nil, "Typed names are trimmed and must not be empty")
+        var rules = ProfileLibrary(original: original)
+        let originalProfile = rules.profiles[0]
+        var changedOriginal = originalProfile
+        changedOriginal.content = "# changed\n"
+        check((try? rules.upsert(changedOriginal)) == nil && (try? rules.upsert(originalProfile)) != nil && rules.profiles == [originalProfile], "Original can't be replaced, and saving it unchanged is allowed")
+        check((try? rules.upsert(Profile(name: "Fake", content: "", isOriginal: true))) == nil, "A second Original can't be added")
+        check((try? rules.rename(id: originalProfile.id, to: "Changed")) == nil && (try? rules.remove(id: originalProfile.id, systemContent: "# other\n")) == nil, "Original can't be renamed or deleted")
+        let work = rules.add(name: "Work", content: "127.0.0.1 work.test\n", reservedNames: ["Work"])
+        check(work.name == "Work (2)", "Reserved names, such as unsaved drafts, are skipped")
+        check((try? rules.rename(id: work.id, to: "  ")) == nil && (try? rules.rename(id: work.id, to: " Work ")) != nil && rules.profiles.last?.name == "Work", "Renames are trimmed and empty names refused")
+        check((try? rules.remove(id: work.id, systemContent: work.content)) == nil && rules.profiles.count == 2, "The active profile can't be deleted")
+        check((try? rules.remove(id: work.id, systemContent: original)) != nil && rules.profiles == [originalProfile], "Inactive profiles can be deleted")
+        check((try? rules.remove(id: work.id, systemContent: original)) == nil, "Deleting a missing profile reports it")
+
+        let file = ProfileLibraryFile(url: folder.appending(path: "shared/profiles.json"))
+        check((try? file.loadOrCreate(original: nil)) == nil && !file.exists, "No library is created until the hosts file can be read")
+        let created = try file.loadOrCreate(original: original)
+        let again = try file.loadOrCreate(original: "# later\n")
+        check(created?.library.profiles.map(\.content) == [original] && again?.library == created?.library, "First launch creates Original once and never replaces it")
+        let before = file.stamp()
+        DispatchQueue.concurrentPerform(iterations: 24) { index in
+            _ = try? file.update { _ = $0.add(name: "Concurrent \(index)", content: "") }
+        }
+        let concurrent = try file.load()!
+        check(concurrent.library.profiles.count == 25 && Set(concurrent.library.profiles.map(\.name)).count == 25, "Concurrent updates each keep the others' changes")
+        check(before != concurrent.stamp && concurrent.stamp == file.stamp(), "Saving changes the file's stamp")
+        let unchanged = try Data(contentsOf: file.url)
+        _ = try? file.update { library in
+            library.profiles.removeAll()
+            throw ProfileLibraryError.notFound
+        }
+        let afterThrow = try Data(contentsOf: file.url)
+        check(afterThrow == unchanged, "A change that throws writes nothing")
+
         // Run the actual install shell against an isolated directory. Only the fixed
         // target, root ownership and DNS operations are substituted for this check.
         let target = folder.appending(path: "hosts")
