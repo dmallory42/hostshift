@@ -43,14 +43,14 @@ Then package the stapled app as a drag-to-Applications disk image, and notarise 
 ```sh
 HOSTSHIFT_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 ./scripts/package-dmg.sh build/Hostshift.app
-xcrun notarytool submit build/Hostshift-1.1.0.dmg --keychain-profile Hostshift-notary --wait
-xcrun stapler staple build/Hostshift-1.1.0.dmg
-spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.1.0.dmg
+xcrun notarytool submit build/Hostshift-1.2.0.dmg --keychain-profile Hostshift-notary --wait
+xcrun stapler staple build/Hostshift-1.2.0.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 build/Hostshift-1.2.0.dmg
 ```
 
 The disk image is named after the app's version. `package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
 
-After publishing the notarised disk image, update the `hostshift` cask in the [`dmallory42/homebrew-tap`](https://github.com/dmallory42/homebrew-tap) repository. Set its `version` and the disk image's SHA-256 (`shasum -a 256 build/Hostshift-1.1.0.dmg`), then check it with `brew audit --cask dmallory42/tap/hostshift` and `brew install --cask dmallory42/tap/hostshift`. The cask links `hostshift` to the app's executable. It doesn't link `hs`, because Homebrew won't install over a command that another tool already provides.
+After publishing the notarised disk image, update the `hostshift` cask in the [`dmallory42/homebrew-tap`](https://github.com/dmallory42/homebrew-tap) repository. Set its `version` and the disk image's SHA-256 (`shasum -a 256 build/Hostshift-1.2.0.dmg`), then check it with `brew audit --cask dmallory42/tap/hostshift` and `brew install --cask dmallory42/tap/hostshift`. The cask links `hostshift` to the app's executable. It doesn't link `hs`, because Homebrew won't install over a command that another tool already provides.
 
 Local builds install the helper in `/Library/PrivilegedHelperTools/dev.dmallory.hostshift.helper`, its launch daemon in `/Library/LaunchDaemons/dev.dmallory.hostshift.helper.plist`, and its pinned identities in `/Library/Application Support/Hostshift/registration.json`. These files are root-owned. launchd loads the helper on demand, so it stays available across app restarts. Rebuilding the app requires enabling access again because the local signature changes. Hostshift verifies the staged helper signature before installing it.
 
