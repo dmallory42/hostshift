@@ -45,13 +45,15 @@ enum CLI {
 
     private static func report(_ message: String, code: CLIExitCode, json: Bool) {
         let context = CLIContext.active
+        // Commands that already printed their result, like validate, fail with no message.
+        guard !message.isEmpty else { return }
         if json {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-            let output = ErrorOutput(error: message.isEmpty ? "Failed." : message, code: code.rawValue)
+            let output = ErrorOutput(error: message, code: code.rawValue)
             let data = (try? encoder.encode(output)) ?? Data()
             context.writeError(String(decoding: data, as: UTF8.self) + "\n")
-        } else if !message.isEmpty {
+        } else {
             context.writeError(message.hasPrefix("Error:") || message.hasPrefix("Usage:") ? message + "\n" : "Error: \(message)\n")
         }
     }

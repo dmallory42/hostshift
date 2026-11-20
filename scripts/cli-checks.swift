@@ -140,7 +140,7 @@ final class Harness: @unchecked Sendable {
         code = await h.run("validate", "Broken", "--json")
         let diagnostics = try h.json()
         let first = (diagnostics["diagnostics"] as? [[String: Any]])?.first
-        try check(code == 5 && diagnostics["valid"] as? Bool == false && first?["line"] as? Int == 2, "validate exits with 5 and reports line numbers")
+        try check(code == 5 && diagnostics["valid"] as? Bool == false && first?["line"] as? Int == 2 && h.errors.isEmpty, "validate exits with 5 and reports line numbers, with nothing extra on stderr")
         code = await h.run("validate", "API v2")
         try check(code == 0 && h.output.contains("No problems"), "validate passes a valid profile")
 
