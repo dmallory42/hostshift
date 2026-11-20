@@ -37,6 +37,7 @@ Native macOS app for switching `/etc/hosts` between saved profiles. A privileged
 ## Product behaviour
 
 - User-facing copy says **Activate**. Internal `apply` names are fine.
+- The `hostshift` command-line tool is the app's executable and follows the same rules through HostsCore. Its exit codes, JSON fields and non-interactive behaviour are an interface for scripts and agents; keep [docs/cli.md](docs/cli.md) in step with them.
 - Save stores a profile locally. Activate validates, saves that profile and installs it; a failed save must stop the install, and other drafts stay unsaved.
 - Activation replaces the whole hosts file. When `/etc/hosts` matches neither the last activation nor a saved profile, ask whether to save it as a profile, replace it or cancel. Saving edits to the active profile must not trigger this prompt.
 - The helper keeps one backup, `/private/etc/hosts.hostshift-backup`, holding the file the latest switch replaced. A rejected switch leaves it unchanged.

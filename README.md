@@ -43,11 +43,25 @@ You can also activate a profile from its right-click menu or the macOS menu bar.
 
 If another app or a manual edit has changed `/etc/hosts`, Hostshift asks before replacing those changes. Choose **Save as Profile** to keep them.
 
+## Command line
+
+The `hostshift` command does the same everyday tasks from Terminal, using the same profiles:
+
+```sh
+hostshift list
+hostshift activate Staging
+hostshift new "Local dev" --from ~/dev.hosts
+```
+
+Install it with `brew install --cask dmallory42/tap/hostshift`. If you installed from the disk image, **Settings → Command Line** shows the commands to link it. You can also add `hs` as a shorter name; [the reference](docs/cli.md#install) explains how, and how to remove it if another tool uses that name.
+
+AI agents and scripts can run `hostshift --help` to learn the tool. Every command accepts `--json`, never prompts without a terminal, and uses fixed exit codes. See the [command-line reference](docs/cli.md) for details.
+
 ## Your configuration
 
 Profiles stay on your Mac. Hostshift keeps your initial hosts file as **Original**. Each switch saves the file it replaces to `/private/etc/hosts.hostshift-backup`. Existing connections and apps with their own DNS caches may need restarting.
 
-To uninstall, activate **Original** if you want to restore it, then choose **Settings → Disable System Access** before deleting the app. The last backup stays at `/private/etc/hosts.hostshift-backup`; remove it with `sudo rm` if you no longer need it.
+To uninstall, activate **Original** if you want to restore it, then choose **Settings → Disable System Access** before deleting the app. If you linked the `hostshift` or `hs` command yourself, remove those links too. The last backup stays at `/private/etc/hosts.hostshift-backup`; remove it with `sudo rm` if you no longer need it.
 
 ## Updates and development
 

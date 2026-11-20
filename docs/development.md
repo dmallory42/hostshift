@@ -50,6 +50,8 @@ spctl --assess --type open --context context:primary-signature --verbose=2 build
 
 The disk image is named after the app's version. `package-dmg.sh` scripts Finder to lay out the window, so the first run asks permission to control Finder. Keep app-specific passwords in a password manager or Keychain, and use `notarytool store-credentials` with its secure prompt rather than putting passwords in command arguments.
 
+After publishing the notarised disk image, update the `hostshift` cask in the [`dmallory42/homebrew-tap`](https://github.com/dmallory42/homebrew-tap) repository. Set its `version` and the disk image's SHA-256 (`shasum -a 256 build/Hostshift-1.1.0.dmg`), then check it with `brew audit --cask dmallory42/tap/hostshift` and `brew install --cask dmallory42/tap/hostshift`. The cask links `hostshift` to the app's executable. It doesn't link `hs`, because Homebrew won't install over a command that another tool already provides.
+
 Local builds install the helper in `/Library/PrivilegedHelperTools/dev.dmallory.hostshift.helper`, its launch daemon in `/Library/LaunchDaemons/dev.dmallory.hostshift.helper.plist`, and its pinned identities in `/Library/Application Support/Hostshift/registration.json`. These files are root-owned. launchd loads the helper on demand, so it stays available across app restarts. Rebuilding the app requires enabling access again because the local signature changes. Hostshift verifies the staged helper signature before installing it.
 
 Apple-signed builds instead use `SMAppService`. Approve the helper once under **System Settings → General → Login Items & Extensions**. Hostshift shows pending, enabled and revoked states.
@@ -68,9 +70,19 @@ The command contains base64-encoded content, so profile text is never interprete
 
 Profiles can contain IPv4, IPv6, aliases and comments. Invalid mappings block activation. Fields are separated by spaces or tabs, and lines end with LF or CRLF. Hostnames must use ASCII or punycode. This small app limits activation and imports to 96 KB to keep the helper command within system limits. Empty or comment-only profiles are valid and deliberately remove all mappings when activated.
 
+## Command-line tool
+
+The `hostshift` command is the app's own executable. `HostshiftMain` runs the command-line tool when the executable is invoked as `hostshift` or `hs`, or with a command, and starts the app otherwise. Because the tool has the app's exact signature, the helper accepts it through the same XPC checks and local registration, and no other client needs to be trusted. A link such as `/opt/homebrew/bin/hostshift` is resolved and the process re-executes from the real path, so Foundation finds the app bundle. `argv[0]` is kept, so help shows the name that was typed.
+
+Arguments are parsed with Swift Argument Parser. The commands share `ProfileActivation` and the `ProfileLibrary` rules in HostsCore with the app, so validation, naming, the Original and active-profile protections, and the external-changes check behave the same way. The tool has no drafts and saves each change immediately.
+
+The app and the tool can both change `profiles.json`. `ProfileLibraryFile` re-reads the file under an exclusive lock on `profiles.json.lock`, applies one change and replaces the file atomically. The app reloads the library when the file changes, during its three-second check and before acting on a profile, and keeps its drafts.
+
+Exit codes and JSON fields are part of the interface. Change them only with [the command-line reference](cli.md), which documents them for scripts and agents.
+
 ## Verification
 
-The executable checks cover validation, persistence, active-profile selection, corrupt library handling, backup creation, exact content replacement, external-change conflicts and symlink rejection. Helper checks cover independent request validation, rejected and accepted XPC peers, the idle exit, and isolated local installation and removal. Profile checks run activation against a temporary hosts file with the helper call and external-change prompt substituted. Installation checks use temporary files and substitute ownership and DNS commands. They do not modify `/etc/hosts`, register a real daemon, or request administrator access.
+The executable checks cover validation, persistence, active-profile selection, corrupt library handling, backup creation, exact content replacement, external-change conflicts and symlink rejection. Helper checks cover independent request validation, rejected and accepted XPC peers, the idle exit, and isolated local installation and removal. Profile checks run activation against a temporary hosts file with the helper call and external-change prompt substituted. Profile checks also cover another process changing the library while the app has drafts. CLI checks run every command against a temporary library and hosts file, with the helper, terminal, editor and system-access status substituted. Installation checks use temporary files and substitute ownership and DNS commands. They do not modify `/etc/hosts`, register a real daemon, or request administrator access.
 
 For manual verification, check profile editing, saving, switching, import/export, keyboard navigation and helper setup. Older supported macOS versions still need testing.
 
