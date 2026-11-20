@@ -96,6 +96,7 @@ If `/etc/hosts` matches neither a saved profile nor the last activation, another
 ## Scripts and agents
 
 - Pass `--json` to any command that prints output. JSON goes to stdout; messages and warnings go to stderr.
+- In a terminal, output uses colour and symbols. Piped or redirected output gets plain text, as do `NO_COLOR` and `TERM=dumb`, and `--json` is never styled. Read `--json` rather than the text, which may change between versions.
 - Without a terminal on stdin and stderr, no command prompts. A command that needs a decision exits with code 3 and the message names the flag to pass (`--replace`, `--save-current` or `--yes`).
 - With `--json`, errors are written to stderr as `{"code": 1, "error": "…"}`.
 - `activate` is safe to repeat: it returns `"changed": false` when the profile is already active.

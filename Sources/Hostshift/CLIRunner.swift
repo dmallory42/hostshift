@@ -16,15 +16,20 @@ enum CLI {
 
     /// Parses and runs one command, returning its exit code. Errors go to stderr, as JSON when --json was passed.
     static func run(_ arguments: [String], context: CLIContext) async -> Int32 {
-        await CLIContext.$current.withValue(context) {
-            let json = arguments.contains("--json")
+        let json = arguments.contains("--json")
+        var context = context
+        if json {
+            context.outputStyle = .plain
+            context.errorStyle = .plain
+        }
+        return await CLIContext.$current.withValue(context) {
             do {
                 var command = try await HostshiftCommand.asyncParseAsRoot(arguments)
                 if var command = command as? AsyncParsableCommand { try await command.run() }
                 else { try command.run() }
                 return CLIExitCode.success.rawValue
             } catch let error as CLIError {
-                report(error.message, code: error.code, json: json)
+                report(error.message, code: error.code, json: json, isFormatted: error.isFormatted)
                 return error.code.rawValue
             } catch {
                 let message = HostshiftCommand.fullMessage(for: error)
@@ -43,7 +48,7 @@ enum CLI {
         }
     }
 
-    private static func report(_ message: String, code: CLIExitCode, json: Bool) {
+    private static func report(_ message: String, code: CLIExitCode, json: Bool, isFormatted: Bool = false) {
         let context = CLIContext.active
         // Commands that already printed their result, like validate, fail with no message.
         guard !message.isEmpty else { return }
@@ -53,8 +58,15 @@ enum CLI {
             let output = ErrorOutput(error: message, code: code.rawValue)
             let data = (try? encoder.encode(output)) ?? Data()
             context.writeError(String(decoding: data, as: UTF8.self) + "\n")
+        } else if isFormatted || message.hasPrefix("Usage:") {
+            context.writeError(message + "\n")
+        } else if context.errorStyle.isEnabled {
+            let style = context.errorStyle
+            let symbol = code == .needsDecision ? style.warning : style.failure
+            let text = message.hasPrefix("Error: ") ? String(message.dropFirst("Error: ".count)) : message
+            context.writeError("\(symbol) \(text)\n")
         } else {
-            context.writeError(message.hasPrefix("Error:") || message.hasPrefix("Usage:") ? message + "\n" : "Error: \(message)\n")
+            context.writeError(message.hasPrefix("Error:") ? message + "\n" : "Error: \(message)\n")
         }
     }
 }

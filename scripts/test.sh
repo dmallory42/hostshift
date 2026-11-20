@@ -39,6 +39,6 @@ run_checks editor-checks \
     Sources/Hostshift/HostsTextCoordinator.swift
 run_checks update-checks
 run_checks cli-checks \
-    Sources/Hostshift/CLIContext.swift Sources/Hostshift/CLICommands.swift Sources/Hostshift/CLIRunner.swift \
+    Sources/Hostshift/CLIContext.swift Sources/Hostshift/CLIStyle.swift Sources/Hostshift/CLICommands.swift Sources/Hostshift/CLIRunner.swift \
     Sources/Hostshift/CommandLineInstall.swift \
     "$MODULES/ArgumentParser.o" "$MODULES/ArgumentParserToolInfo.o"

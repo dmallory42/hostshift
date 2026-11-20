@@ -92,10 +92,28 @@ struct StatusCommand: AsyncParsableCommand {
                                  externalChanges: hosts.map(library.hasExternalChanges) ?? false, systemAccess: access))
             return
         }
-        if let active { context.writeLine("Active: \(active.displayName)") }
-        else if hosts == nil { context.writeLine("Can’t read \(context.hostsURL.path).") }
-        else { context.writeLine("/etc/hosts doesn’t match any saved profile.") }
-        context.writeLine("System access: \(access.description)")
+        let style = context.outputStyle
+        guard style.isEnabled else {
+            if let active { context.writeLine("Active: \(active.displayName)") }
+            else if hosts == nil { context.writeLine("Can’t read \(context.hostsURL.path).") }
+            else { context.writeLine("/etc/hosts doesn’t match any saved profile.") }
+            context.writeLine("System access: \(access.description)")
+            return
+        }
+        let width = "System access".count + 3
+        if let active {
+            context.writeLine("\(style.success) \(style.bold(visible(active.displayName))) is active")
+            context.writeLine("  \(style.column("/etc/hosts", width: width))matches \(visible(active.displayName))")
+        } else if let hosts {
+            context.writeLine("\(style.warning) \(style.bold("No profile is active"))")
+            let state = library.hasExternalChanges(in: hosts) ? "changed outside Hostshift" : "doesn’t match any saved profile"
+            context.writeLine("  \(style.column("/etc/hosts", width: width))\(style.yellow(state))")
+        } else {
+            context.writeLine("\(style.failure) \(style.bold("Can’t read \(context.hostsURL.path)"))")
+        }
+        let accessState = access == .ready ? style.green(access.state) : style.yellow(access.state)
+        context.writeLine("  \(style.column("System access", width: width))\(accessState)")
+        if let hint = access.hint { context.writeLine("  \(style.dim(hint))") }
     }
 }
 
@@ -112,9 +130,19 @@ struct ListCommand: AsyncParsableCommand {
             try writeJSON(["profiles": library.profiles.map { ProfileSummary($0, activeID: active) }])
             return
         }
+        let style = context.outputStyle
+        let width = library.profiles.map { visible($0.displayName).count }.max() ?? 0
         for profile in library.profiles {
             let tags = [profile.id == active ? "active" : nil, profile.isOriginal ? "read-only" : nil].compactMap(\.self)
-            context.writeLine((profile.id == active ? "* " : "  ") + profile.displayName + (tags.isEmpty ? "" : "  (\(tags.joined(separator: ", ")))"))
+            guard style.isEnabled else {
+                context.writeLine((profile.id == active ? "* " : "  ") + profile.displayName + (tags.isEmpty ? "" : "  (\(tags.joined(separator: ", ")))"))
+                continue
+            }
+            let name = visible(profile.displayName)
+            let mark = profile.id == active ? style.success : " "
+            let shown = profile.id == active ? style.bold(name) : name
+            let padding = String(repeating: " ", count: width - name.count + 3)
+            context.writeLine("\(mark) \(shown)" + (tags.isEmpty ? "" : padding + style.dim(tags.joined(separator: " · "))))
         }
     }
 }
@@ -169,6 +197,10 @@ struct ValidateCommand: AsyncParsableCommand {
         let diagnostics = diagnosticsOutput(content)
         if output.json {
             try writeJSON(Result(valid: diagnostics.isEmpty, diagnostics: diagnostics))
+        } else if context.outputStyle.isEnabled {
+            let style = context.outputStyle
+            context.writeLine(diagnostics.isEmpty ? "\(style.success) No problems found."
+                              : styledProblems(in: content, style: style, symbol: style.failure))
         } else if diagnostics.isEmpty {
             context.writeLine("No problems found.")
         } else {
@@ -223,13 +255,20 @@ func activateProfile(_ target: Profile, replace: Bool, saveCurrent: Bool, json: 
     let context = CLIContext.active
     let issues = HostsValidator.issues(in: target.content)
     guard issues.isEmpty else {
+        let style = context.errorStyle
+        if style.isEnabled {
+            let heading = "\(visible(target.displayName)) can’t be activated. \(problemCount(issues.count))."
+            throw CLIError(.invalid, styledProblems(in: target.content, style: style, symbol: style.failure, heading: heading), isFormatted: true)
+        }
         throw CLIError(.invalid, "“\(target.displayName)” can’t be activated:\n" + issues.joined(separator: "\n"))
     }
     let hosts = try context.readHosts()
     let library = try context.loadLibrary()
     if library.activeID(matching: hosts) == target.id {
         if json { try writeJSON(ActivationResult(profile: ProfileSummary(target, activeID: target.id), changed: false)) }
-        else { context.writeLine("“\(target.displayName)” is already active.") }
+        else if context.outputStyle.isEnabled {
+            context.writeLine("\(context.outputStyle.success) \(context.outputStyle.bold(visible(target.displayName))) is already active.")
+        } else { context.writeLine("“\(target.displayName)” is already active.") }
         return
     }
     let access = await context.systemAccess()
@@ -254,8 +293,12 @@ func activateProfile(_ target: Profile, replace: Bool, saveCurrent: Bool, json: 
     if json {
         try writeJSON(ActivationResult(profile: ProfileSummary(target, activeID: target.id), changed: true, warning: warning))
     } else {
-        context.writeLine("Activated “\(target.displayName)”.")
-        if let warning { context.warn(warning) }
+        if context.outputStyle.isEnabled {
+            context.writeLine("\(context.outputStyle.success) Activated \(context.outputStyle.bold(visible(target.displayName))).")
+        } else {
+            context.writeLine("Activated “\(target.displayName)”.")
+        }
+        if let warning { context.warn(context.errorStyle.isEnabled ? "\(context.errorStyle.warning) \(warning)" : warning) }
     }
 }
 
@@ -291,10 +334,20 @@ private func report(_ verb: String, _ profile: Profile, in library: ProfileLibra
         try writeJSON(ProfileResult(profile: ProfileSummary(profile, activeID: activeID(in: library)), diagnostics: diagnostics))
         return
     }
-    context.writeLine("\(verb) “\(profile.displayName)”.")
-    if !diagnostics.isEmpty {
+    context.writeLine(done(verb, profile))
+    guard !diagnostics.isEmpty else { return }
+    if context.errorStyle.isEnabled {
+        context.warn(styledProblems(in: profile.content, style: context.errorStyle, symbol: context.errorStyle.warning))
+    } else {
         context.warn("It has problems that block activation:\n" + HostsValidator.issues(in: profile.content).joined(separator: "\n"))
     }
+}
+
+/// “Created “API”.” in plain output, or a check mark and the name in bold at a terminal.
+private func done(_ verb: String, _ profile: Profile) -> String {
+    let style = CLIContext.active.outputStyle
+    guard style.isEnabled else { return "\(verb) “\(profile.displayName)”." }
+    return "\(style.success) \(verb) \(style.bold(visible(profile.displayName)))."
 }
 
 /// Typed names are kept exactly, so a name already in use is refused instead of numbered.
@@ -446,7 +499,9 @@ struct EditCommand: AsyncParsableCommand {
             }
             let issues = HostsValidator.issues(in: edited)
             if issues.isEmpty { break }
-            context.warn(issues.joined(separator: "\n"))
+            context.warn(context.errorStyle.isEnabled
+                         ? styledProblems(in: edited, style: context.errorStyle, symbol: context.errorStyle.warning) + "\n"
+                         : issues.joined(separator: "\n"))
             while true {
                 switch context.ask("Edit again, save anyway, or discard your changes? [E/s/d]") {
                 case "", "e", "edit": continue editing
@@ -509,6 +564,6 @@ struct DeleteCommand: AsyncParsableCommand {
         }
         try context.update { try $0.remove(id: target.id, systemContent: hosts) }
         if output.json { try writeJSON(["deleted": ProfileSummary(target, activeID: nil)]) }
-        else { context.writeLine("Deleted “\(target.displayName)”.") }
+        else { context.writeLine(done("Deleted", target)) }
     }
 }

@@ -13,6 +13,8 @@ final class Harness: @unchecked Sendable {
     var input = Data()
     var installs = 0
     var editorChange: (@Sendable (URL) -> Void)?
+    /// Pretends stdout and stderr are a terminal that allows colour.
+    var styled = false
     private(set) var output = ""
     private(set) var errors = ""
 
@@ -42,7 +44,9 @@ final class Harness: @unchecked Sendable {
             edit: { file in
                 self.editorChange?(file)
                 return true
-            })
+            },
+            outputStyle: CLIStyle(isEnabled: styled),
+            errorStyle: CLIStyle(isEnabled: styled))
     }
 
     /// Runs one command and returns its exit code, with output and errors from that run only.
@@ -238,6 +242,42 @@ final class Harness: @unchecked Sendable {
 
         code = await h.run("---completion", "show", "--", "positional@0", "1", "0", "hs", "show", "")
         try check(code == 0 && h.output.split(separator: "\n").contains("API v2"), "Shell completion suggests profile names")
+
+        // Terminal styling
+        try check(CLIStyle.allowsColour([:]) && CLIStyle.allowsColour(["NO_COLOR": ""]), "Colour is allowed by default and when NO_COLOR is empty")
+        try check(!CLIStyle.allowsColour(["NO_COLOR": "1"]) && !CLIStyle.allowsColour(["TERM": "dumb"]), "NO_COLOR and TERM=dumb turn colour off")
+        let t = try Harness()
+        defer { try? FileManager.default.removeItem(at: t.folder) }
+        try original.write(to: t.hosts, atomically: true, encoding: .utf8)
+        _ = await t.run("list")
+        try check(t.output == "* Original  (active, read-only)\n", "Without a terminal, list prints the plain format")
+        _ = await t.run("status")
+        let plainStatus = t.output
+        t.styled = true
+        let escape = "\u{1B}["
+        code = await t.run("list")
+        try check(code == 0 && t.output.contains("✓") && t.output.contains(escape) && t.output.contains("active · read-only"), "At a terminal, list marks the active profile with a check and colour")
+        code = await t.run("status")
+        try check(code == 0 && t.output.contains("is active") && t.output.contains("System access") && t.output != plainStatus, "At a terminal, status uses the column layout")
+        code = await t.run("list", "--json")
+        try check(code == 0 && !t.output.contains(escape) && (try? JSONSerialization.jsonObject(with: Data(t.output.utf8))) != nil, "--json output is never styled")
+        code = await t.run("show", "Nope", "--json")
+        try check(code == 1 && !t.errors.contains(escape) && (try t.errorJSON())["code"] as? Int == 1, "--json errors are never styled")
+        code = await t.run("show", "Nope")
+        try check(code == 1 && t.errors.hasPrefix("\(escape)31m✗") && t.errors.contains("Profiles:") && t.errors.contains("Original"), "At a terminal, errors start with a red cross and list the profiles on one line")
+        t.input = Data("127.0.0.1 ok.test\nx\u{1B}]0;title\u{07}\n".utf8)
+        code = await t.run("validate", "--file", "-")
+        try check(code == 5 && t.output.contains("1 problem blocks activation") && t.output.contains("2 │"), "At a terminal, validate shows each problem under its line")
+        try check(t.output.contains("x␛]0;title␇") && !t.output.contains("\u{1B}]0;"), "Control characters in profile text are shown as symbols, never sent to the terminal")
+        t.input = Data("127.0.0.1 styled.test\n".utf8)
+        code = await t.run("new", "Styled", "--from", "-")
+        try check(code == 0 && t.output.contains("Created") && t.output.contains("✓"), "At a terminal, saves confirm with a check")
+        code = await t.run("activate", "Styled")
+        try check(code == 0 && t.output.contains("Activated") && (try String(contentsOf: t.hosts, encoding: .utf8)) == "127.0.0.1 styled.test\n", "At a terminal, activate confirms with a check")
+        try "127.0.0.1 manual.test\n".write(to: t.hosts, atomically: true, encoding: .utf8)
+        code = await t.run("activate", "Original")
+        try check(code == 3 && t.errors.contains("!") && t.errors.contains("--save-current"), "A needed decision is marked as a warning, not a failure")
+
         let bin = h.folder.appending(path: "bin")
         let other = h.folder.appending(path: "other")
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)

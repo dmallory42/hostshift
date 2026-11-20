@@ -46,7 +46,9 @@ extension CLIContext {
             readInput: { try FileHandle.standardInput.readToEnd() ?? Data() },
             write: { FileHandle.standardOutput.write(Data($0.utf8)) },
             writeError: { FileHandle.standardError.write(Data($0.utf8)) },
-            edit: runEditor
+            edit: runEditor,
+            outputStyle: .forStream(STDOUT_FILENO),
+            errorStyle: .forStream(STDERR_FILENO)
         )
     }
 

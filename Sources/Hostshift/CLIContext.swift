@@ -15,6 +15,9 @@ struct CLIContext: Sendable {
     var writeError: @Sendable (String) -> Void
     /// Opens a file in the user's editor and waits for it to close. Returns false if the editor failed.
     var edit: @Sendable (URL) async -> Bool
+    /// Colour and symbols for stdout and stderr. Plain unless that stream is a terminal; always plain with --json.
+    var outputStyle = CLIStyle.plain
+    var errorStyle = CLIStyle.plain
 
     @TaskLocal static var current: CLIContext?
 
@@ -68,6 +71,26 @@ enum CLISystemAccess: String, Codable, Sendable {
         case .unavailable: "unavailable for this build"
         }
     }
+
+    /// A short state for the status column, with what to do about it in `hint`.
+    var state: String {
+        switch self {
+        case .ready: "ready"
+        case .needsApproval: "waiting for approval"
+        case .notEnabled: "not enabled"
+        case .needsReenabling: "needs enabling again"
+        case .unavailable: "unavailable for this build"
+        }
+    }
+
+    var hint: String? {
+        switch self {
+        case .ready, .unavailable: nil
+        case .needsApproval: "Approve Hostshift in System Settings → General → Login Items & Extensions."
+        case .notEnabled: "Open Hostshift and choose Enable System Access."
+        case .needsReenabling: "This build of Hostshift changed. Open it and enable system access again."
+        }
+    }
 }
 
 /// Exit codes are part of the tool's interface. Keep them in step with docs/cli.md.
@@ -83,9 +106,12 @@ enum CLIExitCode: Int32, Sendable {
 struct CLIError: Error, CustomStringConvertible {
     var code: CLIExitCode
     var message: String
-    init(_ code: CLIExitCode, _ message: String) {
+    /// The message already starts with its own symbol, so the runner prints it as it is.
+    var isFormatted = false
+    init(_ code: CLIExitCode, _ message: String, isFormatted: Bool = false) {
         self.code = code
         self.message = message
+        self.isFormatted = isFormatted
     }
     var description: String { message }
 }
@@ -106,6 +132,10 @@ func findProfile(name: String?, id: String?, in library: ProfileLibrary) throws 
     let folded = library.profiles.filter { $0.name.compare(name, options: .caseInsensitive) == .orderedSame }
     if folded.count == 1 { return folded[0] }
     if folded.count > 1 { throw ambiguous(folded) }
+    if let style = CLIContext.current?.errorStyle, style.isEnabled {
+        let names = library.profiles.map { visible($0.displayName) }.joined(separator: ", ")
+        throw CLIError(.failure, "No profile is named “\(visible(name))”.\n  \(style.dim("Profiles:")) \(names)")
+    }
     let names = library.profiles.map { "  \($0.displayName)" }.joined(separator: "\n")
     throw CLIError(.failure, "No profile is named “\(name)”. Profiles:\n\(names)")
 }
