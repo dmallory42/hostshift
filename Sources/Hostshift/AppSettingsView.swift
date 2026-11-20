@@ -12,6 +12,8 @@ struct AppSettingsView: View {
             Divider()
             UpdateSettingsView(updater: updater)
             Divider()
+            CommandLineSettingsView()
+            Divider()
             SystemAccessView(access: store.systemAccess)
         }
         .frame(width: 440)

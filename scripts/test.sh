@@ -40,4 +40,5 @@ run_checks editor-checks \
 run_checks update-checks
 run_checks cli-checks \
     Sources/Hostshift/CLIContext.swift Sources/Hostshift/CLICommands.swift Sources/Hostshift/CLIRunner.swift \
+    Sources/Hostshift/CommandLineInstall.swift \
     "$MODULES/ArgumentParser.o" "$MODULES/ArgumentParserToolInfo.o"

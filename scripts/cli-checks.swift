@@ -238,6 +238,21 @@ final class Harness: @unchecked Sendable {
 
         code = await h.run("---completion", "show", "--", "positional@0", "1", "0", "hs", "show", "")
         try check(code == 0 && h.output.split(separator: "\n").contains("API v2"), "Shell completion suggests profile names")
+        let bin = h.folder.appending(path: "bin")
+        let other = h.folder.appending(path: "other")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        let app = h.folder.appending(path: "Hostshift")
+        try Data().write(to: app)
+        try Data().write(to: other.appending(path: "hs"))
+        try FileManager.default.createSymbolicLink(atPath: bin.path + "/hostshift", withDestinationPath: app.path)
+        try FileManager.default.createSymbolicLink(atPath: bin.path + "/hs", withDestinationPath: h.folder.path + "/missing")
+        let folders = [bin.path, other.path, h.folder.path + "/absent"]
+        try check(CommandLineInstall.links(named: "hostshift", in: folders, executable: app) == [CommandLineLink(path: bin.path + "/hostshift", state: .thisApp)], "Settings finds a hostshift link to this app")
+        try check(CommandLineInstall.links(named: "hs", in: folders, executable: app).map(\.state) == [.broken, .other], "Settings reports broken links and an hs that belongs to another program")
+        let commands = CommandLineInstall.installCommands(executable: URL(fileURLWithPath: "/Applications/It's Hostshift.app/Contents/MacOS/Hostshift"), includeAlias: true)
+        try check(commands.contains("ln -sf '/Applications/It'\\''s Hostshift.app/Contents/MacOS/Hostshift' /usr/local/bin/hostshift") && commands.contains("sudo ln -s '"), "Install commands quote the app path and never replace an existing hs")
+        try check(!CommandLineInstall.installCommands(executable: app, includeAlias: false).contains("/hs"), "The hs line is left out when the name is taken")
         print("\(count) CLI checks passed. /etc/hosts was not modified.")
     }
 }
